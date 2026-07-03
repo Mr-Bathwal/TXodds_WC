@@ -1,0 +1,12 @@
+{
+  "name": "MatchPulse — Provably-fair World Cup companion",
+  "short_name": "MatchPulse",
+  "description": "Live World Cup 2026 scores and odds from TxLINE, with predictions timestamped on Solana.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07090c",
+  "theme_color": "#07090c",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -1,26 +1,219 @@
 @import "tailwindcss";
 
+/*
+ * MatchPulse design system — "frozen stadium" theme.
+ * Award-tier aesthetic: deep void black, refractive crystal accents,
+ * pitch-green energy, Solana purple/teal for on-chain trust.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #04060a;
+  --surface: #0a0f16;
+  --surface-2: #111927;
+  --glass: rgba(18, 26, 38, 0.55);
+  --border: #1b2635;
+  --border-strong: #2a3a4d;
+  --foreground: #eef3f8;
+  --muted: #8494a8;
+
+  --pitch: #1ad17a; /* live / positive */
+  --pitch-dim: #0f7a42;
+  --accent: #d4ff4f; /* electric lime */
+  --ice: #8fd8ff; /* crystal highlight */
+  --sol-purple: #9945ff;
+  --sol-teal: #14f195;
+  --danger: #ff5470;
+  --gold: #ffcf5c;
+
+  --font-display: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-glass: var(--glass);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-pitch: var(--pitch);
+  --color-pitch-dim: var(--pitch-dim);
+  --color-accent: var(--accent);
+  --color-ice: var(--ice);
+  --color-sol-purple: var(--sol-purple);
+  --color-sol-teal: var(--sol-teal);
+  --color-danger: var(--danger);
+  --color-gold: var(--gold);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ---- Themes ---- */
+/* "Turf": grass-pitch world — deep greens, lime energy, warm gold. */
+html[data-theme="turf"] {
+  --background: #04120a;
+  --surface: #082013;
+  --surface-2: #0d2c1b;
+  --glass: rgba(10, 34, 20, 0.55);
+  --border: #163a26;
+  --foreground: #f0f7ee;
+  --muted: #8fae97;
+  --pitch: #3ddb84;
+  --accent: #c6ff3d;
+  --ice: #aef4c8;
+  --gold: #ffcf5c;
+}
+
+/* "Royal": night-final under lights — indigo, violet, championship gold. */
+html[data-theme="royal"] {
+  --background: #070512;
+  --surface: #0e0a20;
+  --surface-2: #171030;
+  --glass: rgba(22, 15, 48, 0.55);
+  --border: #251b47;
+  --foreground: #f1eefc;
+  --muted: #988fc0;
+  --pitch: #9945ff;
+  --accent: #ffcf5c;
+  --ice: #b28dff;
+  --gold: #ffcf5c;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Film grain overlay (igloo-style texture) applied via a fixed pseudo-element. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Utilities */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.text-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+}
+
+.gradient-text {
+  background: linear-gradient(120deg, var(--foreground) 20%, var(--ice) 55%, var(--pitch) 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- Animations ---- */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+.live-dot { animation: livePulse 1.3s ease-in-out infinite; }
+
+@keyframes scoreFlash {
+  0% { color: var(--accent); transform: translateY(-3px); }
+  100% { color: var(--foreground); transform: translateY(0); }
+}
+.score-flash { animation: scoreFlash 0.6s ease-out; }
+
+@keyframes solShimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.sol-gradient {
+  background: linear-gradient(90deg, var(--sol-purple), var(--sol-teal), var(--sol-purple));
+  background-size: 200% 100%;
+  animation: solShimmer 4s linear infinite;
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.float-y { animation: floatY 6s ease-in-out infinite; }
+
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal { animation: revealUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee { animation: marquee 28s linear infinite; }
+
+/* Custom cursor glow (desktop only) */
+@media (pointer: fine) {
+  .cursor-glow {
+    position: fixed;
+    top: 0; left: 0;
+    width: 26px; height: 26px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(26, 209, 122, 0.55), transparent 65%);
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width 0.2s, height 0.2s, background 0.2s;
+    mix-blend-mode: screen;
+  }
+}
+
+/* Background video treatment — dimmed, tinted, edge-faded into the page. */
+.video-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.5;
+  filter: saturate(1.1) contrast(1.05);
+}
+.video-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, var(--background) 0%, transparent 22%, transparent 70%, var(--background) 100%),
+    radial-gradient(80% 60% at 50% 45%, transparent 30%, var(--background) 100%);
+}
+
+/* Big open editorial rows (anti-box layout). */
+.rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+}
+
+@keyframes tickerGlow {
+  0%, 100% { text-shadow: 0 0 12px rgba(26, 209, 122, 0.0); }
+  50% { text-shadow: 0 0 18px rgba(26, 209, 122, 0.55); }
+}
+.ticker-glow { animation: tickerGlow 2.6s ease-in-out infinite; }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+::selection {
+  background: var(--pitch);
+  color: var(--background);
 }
