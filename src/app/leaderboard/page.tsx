@@ -33,6 +33,31 @@ export default function LeaderboardPage() {
         </p>
       </div>
 
+      {/* ---------- Podium ---------- */}
+      <div className="flex items-end justify-center gap-3 pt-4">
+        {[rows[1], rows[0], rows[2]].filter(Boolean).map((r) => {
+          const first = r.rank === 1;
+          const medal = r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : "🥉";
+          return (
+            <div key={r.rank} className="flex w-28 flex-col items-center sm:w-36">
+              <span className="text-2xl">{medal}</span>
+              <span className={cn("mt-1 w-full truncate text-center text-sm", r.isUser ? "font-bold text-pitch" : "font-medium")}>
+                {r.name}
+              </span>
+              <span className="font-mono text-xs text-muted tabular-nums">{r.points} pts</span>
+              <div
+                className={cn(
+                  "mt-2 w-full rounded-t-xl border border-b-0",
+                  first
+                    ? "h-24 border-gold/40 bg-gradient-to-b from-gold/25 to-transparent"
+                    : "h-16 border-border bg-gradient-to-b from-surface-2 to-transparent",
+                )}
+              />
+            </div>
+          );
+        })}
+      </div>
+
       {you && (
         <div className="flex items-center justify-between rounded-2xl border border-pitch/30 bg-pitch/5 p-4">
           <div>

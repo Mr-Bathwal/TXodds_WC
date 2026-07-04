@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import type { Fixture } from "@/lib/txline";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "./StatusBadge";
@@ -37,6 +40,29 @@ function TeamRow({
   );
 }
 
+/** Live "kicks off in mm:ss" countdown for scheduled fixtures. */
+function Countdown({ kickoff }: { kickoff: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const ms = new Date(kickoff).getTime() - now;
+  if (ms <= 0 || ms > 3 * 60 * 60_000) return null; // only inside 3h window
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  return (
+    <div className="mt-3 flex items-center gap-2 text-xs">
+      <span className="text-muted">Kicks off in</span>
+      <span className="font-mono font-semibold text-accent tabular-nums">
+        {h > 0 && `${h}:`}
+        {String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}
+      </span>
+    </div>
+  );
+}
+
 export function MatchCard({ fixture }: { fixture: Fixture }) {
   const isLiveish = fixture.status === "live" || fixture.status === "halftime";
   const showScore = fixture.status !== "scheduled";
@@ -53,7 +79,9 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
       )}
     >
       <div className="mb-3 flex items-center justify-between text-xs text-muted">
-        <span className="truncate">{fixture.stage}</span>
+        <span className="truncate">
+          {fixture.stage} · {fixture.venue.split(",")[0]}
+        </span>
         <StatusBadge fixture={fixture} />
       </div>
 
@@ -75,6 +103,18 @@ export function MatchCard({ fixture }: { fixture: Fixture }) {
           showScore={showScore}
         />
       </div>
+
+      {/* live match progress under the teams */}
+      {isLiveish && fixture.minute !== null && (
+        <div className="mt-3 h-0.5 overflow-hidden rounded-full bg-surface-2">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-pitch-dim to-pitch transition-all duration-1000"
+            style={{ width: `${(fixture.minute / 90) * 100}%` }}
+          />
+        </div>
+      )}
+
+      {fixture.status === "scheduled" && <Countdown kickoff={fixture.kickoff} />}
 
       <div className="mt-4">
         <OddsBar odds={fixture.odds} />

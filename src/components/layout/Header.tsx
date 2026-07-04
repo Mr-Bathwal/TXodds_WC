@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/theme";
+import { useFixtures } from "@/lib/hooks";
 
 const NAV = [
   { href: "/matches", label: "Live" },
@@ -14,6 +15,9 @@ const NAV = [
 export function Header() {
   const pathname = usePathname();
   const { theme, cycle } = useTheme();
+  const { data } = useFixtures(30_000);
+  const liveCount =
+    data?.fixtures.filter((f) => f.status === "live" || f.status === "halftime").length ?? 0;
 
   return (
     <header className="fixed top-0 inset-x-0 z-40 border-b border-white/5 bg-background/50 backdrop-blur-xl">
@@ -36,13 +40,18 @@ export function Header() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "px-3 py-1.5 rounded-full transition-colors",
+                  "relative px-3 py-1.5 rounded-full transition-colors",
                   active
                     ? "bg-surface-2 text-foreground"
                     : "text-muted hover:text-foreground hover:bg-surface",
                 )}
               >
                 {item.label}
+                {item.label === "Live" && liveCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-pitch px-1 font-mono text-[10px] font-bold text-background">
+                    {liveCount}
+                  </span>
+                )}
               </Link>
             );
           })}

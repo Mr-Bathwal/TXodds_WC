@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Sora } from "next/font/google";
 import dynamic from "next/dynamic";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
 import { SmoothScroll } from "@/components/providers/SmoothScroll";
 import { CustomCursor } from "@/components/providers/CustomCursor";
 import { ThemeProvider } from "@/lib/theme";
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <SmoothScroll>
             <Header />
             <main className="flex-1 w-full">{children}</main>
+            <Footer />
           </SmoothScroll>
         </ThemeProvider>
       </body>

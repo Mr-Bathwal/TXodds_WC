@@ -242,9 +242,6 @@ export default function Landing() {
         </Reveal>
       </section>
 
-      <footer className="border-t border-border/50 py-8 text-center text-xs text-muted">
-        MatchPulse · Built for the TxODDS × Solana World Cup Hackathon · Data by TxLINE · Footage: Pexels
-      </footer>
     </div>
   );
 }

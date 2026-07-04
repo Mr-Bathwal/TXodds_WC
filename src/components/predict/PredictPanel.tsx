@@ -157,18 +157,29 @@ function OptionButton({
   selected: boolean;
   onClick: () => void;
 }) {
+  const implied = Math.round((1 / odds) * 100);
   return (
     <button
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center rounded-xl border py-3 transition-all",
+        "group/opt relative flex flex-col items-center overflow-hidden rounded-xl border py-3 transition-all",
         selected
           ? "border-pitch bg-pitch/10"
           : "border-border bg-surface-2 hover:border-pitch/40",
       )}
     >
+      {/* implied-probability fill along the bottom */}
+      <div
+        className={cn(
+          "absolute bottom-0 left-0 h-0.5 transition-all duration-500",
+          selected ? "bg-pitch" : "bg-pitch/30",
+        )}
+        style={{ width: `${implied}%` }}
+      />
       <span className="text-sm font-semibold">{label}</span>
-      <span className="mt-0.5 font-mono text-xs text-muted">{odds.toFixed(2)}</span>
+      <span className="mt-0.5 font-mono text-xs text-muted">
+        {odds.toFixed(2)} · {implied}%
+      </span>
       <span className="mt-1 text-[11px] text-pitch">+{points} pts</span>
     </button>
   );
