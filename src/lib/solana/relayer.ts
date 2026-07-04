@@ -52,17 +52,24 @@ export async function anchorCommitment(payload: string): Promise<AnchorResult> {
     return { signature: simulatedSignature(payload), cluster: CLUSTER, simulated: true };
   }
 
-  const connection = new Connection(RPC, "confirmed");
-  const ix = new TransactionInstruction({
-    keys: [{ pubkey: relayer.publicKey, isSigner: true, isWritable: false }],
-    programId: MEMO_PROGRAM_ID,
-    data: Buffer.from(payload, "utf8"),
-  });
-  const tx = new Transaction().add(ix);
-  const signature = await connection.sendTransaction(tx, [relayer]);
-  const latest = await connection.getLatestBlockhash();
-  await connection.confirmTransaction({ signature, ...latest }, "confirmed");
-  return { signature, cluster: CLUSTER, simulated: false };
+  try {
+    const connection = new Connection(RPC, "confirmed");
+    const ix = new TransactionInstruction({
+      keys: [{ pubkey: relayer.publicKey, isSigner: true, isWritable: false }],
+      programId: MEMO_PROGRAM_ID,
+      data: Buffer.from(payload, "utf8"),
+    });
+    const tx = new Transaction().add(ix);
+    const signature = await connection.sendTransaction(tx, [relayer]);
+    const latest = await connection.getLatestBlockhash();
+    await connection.confirmTransaction({ signature, ...latest }, "confirmed");
+    return { signature, cluster: CLUSTER, simulated: false };
+  } catch (err) {
+    // Never let an unfunded relayer or RPC hiccup break the commit flow —
+    // degrade to a simulated anchor so the game keeps working.
+    console.error("anchorCommitment: falling back to simulated anchor:", err);
+    return { signature: simulatedSignature(payload), cluster: CLUSTER, simulated: true };
+  }
 }
 
 export function explorerUrl(signature: string, cluster = CLUSTER): string {
