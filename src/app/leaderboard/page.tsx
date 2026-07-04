@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePredictions } from "@/lib/usePredictions";
 import { buildLeaderboard, type LeaderRow } from "@/lib/leaderboard";
 import { getDisplayName, getIdentity } from "@/lib/solana/identity";
+import { Rule } from "@/components/ui/Rule";
 import { cn } from "@/lib/utils";
 
 export default function LeaderboardPage() {
@@ -24,64 +25,94 @@ export default function LeaderboardPage() {
   const you = rows.find((r) => r.isUser);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 px-4 pb-24 pt-24">
-      <div>
-        <h1 className="mb-1 text-2xl font-bold tracking-tight">Leaderboard</h1>
-        <p className="text-sm text-muted">
-          Ranked by odds-weighted points. Every score is backed by on-chain proof — no inflated
-          totals.
+    <div className="mx-auto w-full max-w-4xl px-5 pb-28 pt-24">
+      {/* ---------- header ---------- */}
+      <section className="relative">
+        <div className="pointer-events-none absolute -inset-x-20 -top-24 h-64 -z-10 bg-[radial-gradient(55%_80%_at_50%_0%,rgba(255,207,92,0.08),transparent_70%)]" />
+        <h1 className="text-display text-4xl font-extrabold sm:text-5xl">
+          The <span className="gradient-text">table</span>
+        </h1>
+        <p className="mt-3 max-w-xl text-sm text-muted sm:text-base">
+          Odds-weighted points — bold calls earn more. Every score is backed by on-chain proof,
+          so no one inflates their rank.
         </p>
-      </div>
+      </section>
 
-      {/* ---------- Podium ---------- */}
-      <div className="flex items-end justify-center gap-3 pt-4">
+      <Rule />
+
+      {/* ---------- podium ---------- */}
+      <section className="flex items-end justify-center gap-4 sm:gap-8">
         {[rows[1], rows[0], rows[2]].filter(Boolean).map((r) => {
           const first = r.rank === 1;
           const medal = r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : "🥉";
           return (
-            <div key={r.rank} className="flex w-28 flex-col items-center sm:w-36">
-              <span className="text-2xl">{medal}</span>
-              <span className={cn("mt-1 w-full truncate text-center text-sm", r.isUser ? "font-bold text-pitch" : "font-medium")}>
+            <div key={r.rank} className="flex w-32 flex-col items-center sm:w-44">
+              <span className={cn("text-3xl", first && "text-4xl")}>{medal}</span>
+              <span
+                className={cn(
+                  "text-display mt-2 w-full truncate text-center font-bold",
+                  first ? "text-xl" : "text-base",
+                  r.isUser && "text-pitch",
+                )}
+              >
                 {r.name}
               </span>
-              <span className="font-mono text-xs text-muted tabular-nums">{r.points} pts</span>
+              <span className="mt-0.5 font-mono text-sm text-muted tabular-nums">
+                {r.points} pts
+              </span>
               <div
                 className={cn(
-                  "mt-2 w-full rounded-t-xl border border-b-0",
+                  "mt-3 w-full rounded-t-2xl",
                   first
-                    ? "h-24 border-gold/40 bg-gradient-to-b from-gold/25 to-transparent"
-                    : "h-16 border-border bg-gradient-to-b from-surface-2 to-transparent",
+                    ? "h-28 bg-gradient-to-b from-gold/30 via-gold/10 to-transparent"
+                    : "h-16 bg-gradient-to-b from-surface-2 to-transparent",
                 )}
               />
             </div>
           );
         })}
-      </div>
+      </section>
 
+      {/* ---------- your rank — open band ---------- */}
       {you && (
-        <div className="flex items-center justify-between rounded-2xl border border-pitch/30 bg-pitch/5 p-4">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-muted">Your rank</div>
-            <div className="text-2xl font-bold">#{you.rank}</div>
-          </div>
-          <div className="text-right">
-            <div className="font-mono text-2xl font-bold text-pitch tabular-nums">{you.points}</div>
-            <div className="text-xs text-muted">points</div>
-          </div>
-        </div>
+        <>
+          <Rule className="my-10" />
+          <section className="grid grid-cols-3 items-end divide-x divide-border/40 text-center">
+            <div>
+              <div className="text-display text-5xl font-extrabold tabular-nums">#{you.rank}</div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.25em] text-muted">your rank</div>
+            </div>
+            <div>
+              <div className="text-display text-5xl font-extrabold text-pitch tabular-nums">
+                {you.points}
+              </div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.25em] text-muted">points</div>
+            </div>
+            <div>
+              <div className="text-display text-5xl font-extrabold tabular-nums">
+                {stats.streak > 0 ? `🔥${stats.streak}` : "—"}
+              </div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.25em] text-muted">streak</div>
+            </div>
+          </section>
+          <Rule className="my-10" />
+        </>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
-        <div className="grid grid-cols-[3rem_1fr_5rem_5rem] gap-2 border-b border-border px-4 py-2 text-[11px] uppercase tracking-wide text-muted">
+      {/* ---------- ledger ---------- */}
+      <section>
+        <div className="grid grid-cols-[3rem_1fr_5rem_6rem] gap-2 pb-3 text-[11px] uppercase tracking-[0.2em] text-muted">
           <span>#</span>
           <span>Player</span>
           <span className="text-right">Acc</span>
           <span className="text-right">Points</span>
         </div>
-        {rows.slice(0, 20).map((r) => (
-          <Row key={`${r.name}-${r.rank}`} row={r} />
-        ))}
-      </div>
+        <div className="divide-y divide-border/40">
+          {rows.slice(0, 20).map((r) => (
+            <Row key={`${r.name}-${r.rank}`} row={r} />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
@@ -91,20 +122,22 @@ function Row({ row }: { row: LeaderRow }) {
   return (
     <div
       className={cn(
-        "grid grid-cols-[3rem_1fr_5rem_5rem] items-center gap-2 px-4 py-2.5 text-sm",
-        row.isUser ? "bg-pitch/10" : "border-t border-border/50",
+        "grid grid-cols-[3rem_1fr_5rem_6rem] items-center gap-2 py-3 text-sm",
+        row.isUser && "bg-gradient-to-r from-pitch/10 to-transparent",
       )}
     >
       <span className="font-mono text-muted tabular-nums">{medal ?? row.rank}</span>
       <span className="flex items-center gap-2 truncate">
         <span className={cn("truncate", row.isUser && "font-semibold text-pitch")}>{row.name}</span>
         {row.streak > 0 && <span className="text-xs text-accent">🔥{row.streak}</span>}
-        {row.isUser && <span className="rounded bg-pitch/20 px-1.5 text-[10px] text-pitch">you</span>}
+        {row.isUser && (
+          <span className="text-[10px] uppercase tracking-wider text-pitch/80">you</span>
+        )}
       </span>
       <span className="text-right font-mono text-muted tabular-nums">
         {Math.round(row.accuracy * 100)}%
       </span>
-      <span className="text-right font-mono font-semibold tabular-nums">{row.points}</span>
+      <span className="text-right font-mono text-base font-semibold tabular-nums">{row.points}</span>
     </div>
   );
 }
