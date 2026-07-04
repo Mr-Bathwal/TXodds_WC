@@ -35,7 +35,16 @@ export function PredictionsList({ predictions }: { predictions: Prediction[] }) 
       {predictions.map((p) => {
         const [homeCode, , awayCode] = p.matchLabel.split(" ");
         return (
-          <div key={p.id} className="grid grid-cols-[1fr_auto] items-center gap-4 py-4 sm:grid-cols-[1.4fr_1fr_auto]">
+          <div
+            key={p.id}
+            onMouseMove={(e) => {
+              const el = e.currentTarget;
+              const r = el.getBoundingClientRect();
+              el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+              el.style.setProperty("--my", `${e.clientY - r.top}px`);
+            }}
+            className="spot-row grid grid-cols-[1fr_auto] items-center gap-4 px-2 py-4 sm:grid-cols-[1.4fr_1fr_auto]"
+          >
             {/* match + pick */}
             <div className="min-w-0">
               <div className="flex items-center gap-2">

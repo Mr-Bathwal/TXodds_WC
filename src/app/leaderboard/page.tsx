@@ -1,11 +1,110 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePredictions } from "@/lib/usePredictions";
 import { buildLeaderboard, type LeaderRow } from "@/lib/leaderboard";
 import { getDisplayName, getIdentity } from "@/lib/solana/identity";
 import { Rule } from "@/components/ui/Rule";
-import { cn } from "@/lib/utils";
+import { cn, fnv1a, seededRandom } from "@/lib/utils";
+
+/* ---------------- Celebration confetti ---------------- */
+
+const RANK_COLORS: Record<number, string[]> = {
+  1: ["#ffcf5c", "#ffe9b0", "#1ad17a", "#ffffff"],
+  2: ["#cbd5e1", "#f1f5f9", "#8fd8ff", "#ffffff"],
+  3: ["#d97706", "#fbbf24", "#ff8a4c", "#ffffff"],
+};
+
+/** One-shot confetti burst; remounts (new key) to celebrate again. */
+function ConfettiBurst({ rank, burst }: { rank: number; burst: number }) {
+  const pieces = useMemo(() => {
+    const seed = fnv1a(`confetti-${rank}-${burst}`);
+    return Array.from({ length: 26 }).map((_, i) => {
+      const angle = seededRandom(seed + i) * Math.PI * 2;
+      const dist = 60 + seededRandom(seed + i * 7) * 130;
+      return {
+        cx: `${Math.cos(angle) * dist}px`,
+        cy: `${Math.sin(angle) * dist - 70}px`,
+        rot: `${Math.round(seededRandom(seed + i * 13) * 720 - 360)}deg`,
+        color: RANK_COLORS[rank][i % RANK_COLORS[rank].length],
+        delay: `${seededRandom(seed + i * 17) * 0.12}s`,
+      };
+    });
+  }, [rank, burst]);
+
+  if (burst === 0) return null;
+  return (
+    <div key={burst} className="pointer-events-none absolute inset-x-0 top-8 z-10 flex justify-center">
+      {pieces.map((p, i) => (
+        <span
+          key={i}
+          className="confetti-piece"
+          style={{
+            background: p.color,
+            animationDelay: p.delay,
+            ["--cx" as string]: p.cx,
+            ["--cy" as string]: p.cy,
+            ["--rot" as string]: p.rot,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ---------------- Podium column ---------------- */
+
+function PodiumColumn({ r }: { r: LeaderRow }) {
+  const [burst, setBurst] = useState(0);
+  const first = r.rank === 1;
+  const medal = r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : "🥉";
+  const glow =
+    r.rank === 1
+      ? "rgba(255,207,92,0.22)"
+      : r.rank === 2
+        ? "rgba(203,213,225,0.14)"
+        : "rgba(217,119,6,0.16)";
+
+  return (
+    <div
+      className="sheen group relative flex w-32 cursor-pointer flex-col items-center overflow-visible sm:w-44"
+      onMouseEnter={() => setBurst((b) => b + 1)}
+    >
+      {/* celebration */}
+      <ConfettiBurst rank={r.rank} burst={burst} />
+      {/* rank glow floods in on hover */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-44 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+        style={{ background: `radial-gradient(60% 70% at 50% 100%, ${glow}, transparent)` }}
+      />
+      <span className={cn("text-3xl transition-transform", first && "text-4xl", "group-hover:animate-[medalPop_0.6s_ease-out]")}>
+        {medal}
+      </span>
+      <span
+        className={cn(
+          "text-display mt-2 w-full truncate text-center font-bold",
+          first ? "text-xl" : "text-base",
+          r.isUser && "text-pitch",
+        )}
+      >
+        {r.name}
+      </span>
+      <span className="mt-0.5 font-mono text-sm text-muted tabular-nums">{r.points} pts</span>
+      <div
+        className={cn(
+          "mt-3 w-full rounded-t-2xl transition-all duration-300 group-hover:scale-x-105",
+          first
+            ? "h-28 bg-gradient-to-b from-gold/30 via-gold/10 to-transparent group-hover:from-gold/50"
+            : r.rank === 2
+              ? "h-16 bg-gradient-to-b from-slate-300/20 to-transparent group-hover:from-slate-300/35"
+              : "h-16 bg-gradient-to-b from-amber-600/20 to-transparent group-hover:from-amber-600/35",
+        )}
+      />
+    </div>
+  );
+}
+
+/* ---------------- Page ---------------- */
 
 export default function LeaderboardPage() {
   const { stats } = usePredictions();
@@ -26,9 +125,17 @@ export default function LeaderboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl px-5 pb-28 pt-24">
-      {/* ---------- header ---------- */}
+      {/* ---------- header — stadium footage backdrop ---------- */}
       <section className="relative">
-        <div className="pointer-events-none absolute -inset-x-20 -top-24 h-64 -z-10 bg-[radial-gradient(55%_80%_at_50%_0%,rgba(255,207,92,0.08),transparent_70%)]" />
+        <video
+          className="pointer-events-none absolute -inset-x-10 -top-16 -z-10 h-64 w-[calc(100%+5rem)] object-cover opacity-25 [mask-image:linear-gradient(to_bottom,black,transparent)]"
+          src="/videos/stadium-night.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
+        <div className="pointer-events-none absolute -inset-x-20 -top-24 h-64 -z-10 bg-[radial-gradient(55%_80%_at_50%_0%,rgba(255,207,92,0.10),transparent_70%)]" />
         <h1 className="text-display text-4xl font-extrabold sm:text-5xl">
           The <span className="gradient-text">table</span>
         </h1>
@@ -40,37 +147,11 @@ export default function LeaderboardPage() {
 
       <Rule />
 
-      {/* ---------- podium ---------- */}
+      {/* ---------- podium (hover to celebrate) ---------- */}
       <section className="flex items-end justify-center gap-4 sm:gap-8">
-        {[rows[1], rows[0], rows[2]].filter(Boolean).map((r) => {
-          const first = r.rank === 1;
-          const medal = r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : "🥉";
-          return (
-            <div key={r.rank} className="flex w-32 flex-col items-center sm:w-44">
-              <span className={cn("text-3xl", first && "text-4xl")}>{medal}</span>
-              <span
-                className={cn(
-                  "text-display mt-2 w-full truncate text-center font-bold",
-                  first ? "text-xl" : "text-base",
-                  r.isUser && "text-pitch",
-                )}
-              >
-                {r.name}
-              </span>
-              <span className="mt-0.5 font-mono text-sm text-muted tabular-nums">
-                {r.points} pts
-              </span>
-              <div
-                className={cn(
-                  "mt-3 w-full rounded-t-2xl",
-                  first
-                    ? "h-28 bg-gradient-to-b from-gold/30 via-gold/10 to-transparent"
-                    : "h-16 bg-gradient-to-b from-surface-2 to-transparent",
-                )}
-              />
-            </div>
-          );
-        })}
+        {[rows[1], rows[0], rows[2]].filter(Boolean).map((r) => (
+          <PodiumColumn key={r.rank} r={r} />
+        ))}
       </section>
 
       {/* ---------- your rank — open band ---------- */}
@@ -121,14 +202,42 @@ function Row({ row }: { row: LeaderRow }) {
   const medal = row.rank === 1 ? "🥇" : row.rank === 2 ? "🥈" : row.rank === 3 ? "🥉" : null;
   return (
     <div
+      onMouseMove={(e) => {
+        const el = e.currentTarget;
+        const r = el.getBoundingClientRect();
+        el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+        el.style.setProperty("--my", `${e.clientY - r.top}px`);
+      }}
       className={cn(
-        "grid grid-cols-[3rem_1fr_5rem_6rem] items-center gap-2 py-3 text-sm",
+        "spot-row group grid grid-cols-[3rem_1fr_5rem_6rem] items-center gap-2 px-2 py-3 text-sm",
         row.isUser && "bg-gradient-to-r from-pitch/10 to-transparent",
       )}
     >
-      <span className="font-mono text-muted tabular-nums">{medal ?? row.rank}</span>
+      <span className="font-mono text-muted tabular-nums">
+        {medal ? (
+          <span className="inline-block transition-transform duration-300 group-hover:scale-125">
+            {medal}
+          </span>
+        ) : (
+          row.rank
+        )}
+      </span>
       <span className="flex items-center gap-2 truncate">
-        <span className={cn("truncate", row.isUser && "font-semibold text-pitch")}>{row.name}</span>
+        {/* ball rolls in on hover */}
+        <span
+          aria-hidden
+          className="-ml-1 w-0 -translate-x-2 text-[11px] opacity-0 transition-all duration-300 group-hover:w-4 group-hover:translate-x-0 group-hover:rotate-[360deg] group-hover:opacity-100"
+        >
+          ⚽
+        </span>
+        <span
+          className={cn(
+            "truncate transition-colors group-hover:text-pitch",
+            row.isUser && "font-semibold text-pitch",
+          )}
+        >
+          {row.name}
+        </span>
         {row.streak > 0 && <span className="text-xs text-accent">🔥{row.streak}</span>}
         {row.isUser && (
           <span className="text-[10px] uppercase tracking-wider text-pitch/80">you</span>
@@ -137,7 +246,9 @@ function Row({ row }: { row: LeaderRow }) {
       <span className="text-right font-mono text-muted tabular-nums">
         {Math.round(row.accuracy * 100)}%
       </span>
-      <span className="text-right font-mono text-base font-semibold tabular-nums">{row.points}</span>
+      <span className="text-right font-mono text-base font-semibold tabular-nums transition-colors group-hover:text-pitch">
+        {row.points}
+      </span>
     </div>
   );
 }

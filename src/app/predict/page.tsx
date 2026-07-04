@@ -4,7 +4,7 @@ import { usePredictions } from "@/lib/usePredictions";
 import { useFixtures } from "@/lib/hooks";
 import { IdentityBar } from "@/components/predict/IdentityBar";
 import { PredictionsList } from "@/components/predict/PredictionsList";
-import { MatchCard } from "@/components/match/MatchCard";
+import { FixtureRow } from "@/components/match/FixtureRow";
 import { Rule } from "@/components/ui/Rule";
 
 export default function PredictPage() {
@@ -14,9 +14,17 @@ export default function PredictPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl px-5 pb-28 pt-24">
-      {/* ---------- header ---------- */}
+      {/* ---------- header — live footage backdrop ---------- */}
       <section className="relative">
-        <div className="pointer-events-none absolute -inset-x-20 -top-24 h-64 -z-10 bg-[radial-gradient(55%_80%_at_50%_0%,rgba(153,69,255,0.10),transparent_70%)]" />
+        <video
+          className="pointer-events-none absolute -inset-x-10 -top-16 -z-10 h-64 w-[calc(100%+5rem)] object-cover opacity-20 [mask-image:linear-gradient(to_bottom,black,transparent)]"
+          src="/videos/ball-kick.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
+        <div className="pointer-events-none absolute -inset-x-20 -top-24 h-64 -z-10 bg-[radial-gradient(55%_80%_at_50%_0%,rgba(153,69,255,0.12),transparent_70%)]" />
         <h1 className="text-display text-4xl font-extrabold sm:text-5xl">
           Predict &amp; <span className="gradient-text">Prove</span>
         </h1>
@@ -41,9 +49,9 @@ export default function PredictPage() {
           <span className="font-mono text-xs text-muted">{open.length} available</span>
         </div>
         {open.length ? (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="divide-y divide-border/40">
             {open.map((f) => (
-              <MatchCard key={f.id} fixture={f} />
+              <FixtureRow key={f.id} fixture={f} />
             ))}
           </div>
         ) : (
