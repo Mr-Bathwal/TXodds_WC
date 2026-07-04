@@ -42,19 +42,24 @@ export function PredictPanel({ fixture }: { fixture: Fixture }) {
 
   if (closed) {
     return (
-      <div className="rounded-2xl border border-border bg-surface p-5 text-center text-sm text-muted">
+      <section className="py-2 text-center text-sm text-muted">
         Predictions are closed — this match has finished.
-      </div>
+      </section>
     );
   }
 
   const done = status === "done" && committed;
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-semibold">Predict &amp; Prove</h3>
-        <span className="text-xs text-muted">Timestamped on Solana</span>
+    <section>
+      <div className="mb-6 flex items-baseline justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">
+          Predict &amp; Prove
+        </h2>
+        <span className="flex items-center gap-1.5 text-[11px] text-muted">
+          <span className="h-1.5 w-1.5 rounded-full bg-sol-teal" />
+          Timestamped on Solana
+        </span>
       </div>
 
       {done ? (
@@ -140,7 +145,7 @@ export function PredictPanel({ fixture }: { fixture: Fixture }) {
           {error && <p className="mt-2 text-center text-xs text-danger">{error}</p>}
         </>
       )}
-    </div>
+    </section>
   );
 }
 

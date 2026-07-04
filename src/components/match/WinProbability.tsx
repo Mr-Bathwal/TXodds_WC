@@ -4,9 +4,8 @@ import type { Fixture } from "@/lib/txline";
 import { impliedProb } from "@/lib/format";
 
 /**
- * Live win probability (SofaScore-style): implied from the current TxLINE 1X2
- * odds, so it shifts in real time with the scoreline and clock. Rendered as a
- * three-segment bar with big percentage readouts.
+ * Win probability — open band, no card chrome. Big numerals implied live from
+ * the TxLINE 1X2 odds, over one wide gradient bar.
  */
 export function WinProbability({ fixture }: { fixture: Fixture }) {
   const raw = {
@@ -25,34 +24,43 @@ export function WinProbability({ fixture }: { fixture: Fixture }) {
   if (fixture.status === "finished") return null;
 
   return (
-    <div className="rounded-2xl border border-border bg-surface/70 p-5 backdrop-blur-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
+    <section>
+      <div className="mb-6 flex items-baseline justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">
           Win probability
         </h2>
-        <span className="text-[11px] text-muted">live · from TxLINE odds</span>
+        <span className="flex items-center gap-1.5 text-[11px] text-muted">
+          <span className="live-dot h-1.5 w-1.5 rounded-full bg-pitch" />
+          live · from TxLINE odds
+        </span>
       </div>
 
-      <div className="mb-2 grid grid-cols-3 text-center">
+      <div className="mb-4 grid grid-cols-3 items-end">
         <div>
-          <div className="font-mono text-2xl font-bold text-pitch tabular-nums">{pct.home}%</div>
-          <div className="text-xs text-muted">{fixture.home.code}</div>
+          <div className="text-display text-5xl font-extrabold text-pitch tabular-nums sm:text-6xl">
+            {pct.home}<span className="text-2xl">%</span>
+          </div>
+          <div className="mt-1 text-xs uppercase tracking-wider text-muted">{fixture.home.name}</div>
         </div>
-        <div>
-          <div className="font-mono text-2xl font-bold text-muted tabular-nums">{pct.draw}%</div>
-          <div className="text-xs text-muted">Draw</div>
+        <div className="text-center">
+          <div className="text-display text-3xl font-bold text-muted tabular-nums">
+            {pct.draw}<span className="text-lg">%</span>
+          </div>
+          <div className="mt-1 text-xs uppercase tracking-wider text-muted">Draw</div>
         </div>
-        <div>
-          <div className="font-mono text-2xl font-bold text-sol-purple tabular-nums">{pct.away}%</div>
-          <div className="text-xs text-muted">{fixture.away.code}</div>
+        <div className="text-right">
+          <div className="text-display text-5xl font-extrabold text-sol-purple tabular-nums sm:text-6xl">
+            {pct.away}<span className="text-2xl">%</span>
+          </div>
+          <div className="mt-1 text-xs uppercase tracking-wider text-muted">{fixture.away.name}</div>
         </div>
       </div>
 
-      <div className="flex h-2.5 overflow-hidden rounded-full">
+      <div className="flex h-3 overflow-hidden rounded-full">
         <div className="bg-gradient-to-r from-pitch-dim to-pitch transition-all duration-700" style={{ width: `${pct.home}%` }} />
-        <div className="bg-muted/40 transition-all duration-700" style={{ width: `${pct.draw}%` }} />
-        <div className="flex-1 bg-gradient-to-r from-sol-purple/70 to-sol-purple transition-all duration-700" />
+        <div className="bg-muted/30 transition-all duration-700" style={{ width: `${pct.draw}%` }} />
+        <div className="flex-1 bg-gradient-to-r from-sol-purple/60 to-sol-purple transition-all duration-700" />
       </div>
-    </div>
+    </section>
   );
 }
