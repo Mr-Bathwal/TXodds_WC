@@ -4,7 +4,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useFixture } from "@/lib/hooks";
 import { StatusBadge } from "@/components/match/StatusBadge";
-import { OddsBar } from "@/components/match/OddsBar";
 import { VerifyBadge } from "@/components/match/VerifyBadge";
 import { PredictPanel } from "@/components/predict/PredictPanel";
 import { GoalThread } from "@/components/match/GoalThread";
@@ -95,10 +94,6 @@ export default function MatchDetail() {
 
         {/* the goal thread grows out of the scoreboard */}
         <GoalThread fixture={fixture} />
-
-        <div className={cn("mx-auto max-w-md", showScore ? "mt-2" : "mt-10")}>
-          <OddsBar odds={fixture.odds} />
-        </div>
       </section>
 
       <Rule />
@@ -121,19 +116,25 @@ export default function MatchDetail() {
       {showScore && (
         <>
           <Rule />
-          <StatsPanel fixture={fixture} />
+          <div className="lg:-mx-16 xl:-mx-32">
+            <StatsPanel fixture={fixture} />
+          </div>
         </>
       )}
 
       <Rule />
 
-      {/* ================= LINEUPS — 3D pitch centrepiece ================= */}
-      <LineupPitch fixture={fixture} />
+      {/* ================= LINEUPS — wide 3D pitch centrepiece ================= */}
+      <div className="lg:-mx-16 xl:-mx-32">
+        <LineupPitch fixture={fixture} />
+      </div>
 
       <Rule />
 
       {/* ================= HEAD TO HEAD ================= */}
-      <HeadToHead fixture={fixture} />
+      <div className="lg:-mx-16 xl:-mx-32">
+        <HeadToHead fixture={fixture} />
+      </div>
     </div>
   );
 }
