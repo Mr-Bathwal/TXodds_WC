@@ -59,7 +59,7 @@ export default function Landing() {
             </h1>
             <p className="reveal mt-6 max-w-xl text-base text-foreground/80 sm:text-lg">
               Live World Cup data straight from the pitch. Predictions locked on Solana before
-              kickoff. Grab the ball — it&rsquo;s yours to play with.
+              kickoff. Give the cup a spin — it&rsquo;s yours to play with.
             </p>
             <div className="reveal pointer-events-auto mt-9 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
               <Link
