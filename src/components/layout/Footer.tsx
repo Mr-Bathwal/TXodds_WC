@@ -17,7 +17,16 @@ export function Footer() {
 
         <div className="text-center text-xs text-muted sm:text-right">
           <div>Built for the TxODDS × Solana World Cup Hackathon</div>
-          <div className="mt-1">Data by TxLINE · Anchored on Solana · Footage: Pexels</div>
+          <div className="mt-1">
+            Data by TxLINE · Anchored on Solana · Footage:{" "}
+            <a href="https://www.pexels.com" target="_blank" rel="noreferrer" className="hover:text-foreground">
+              Pexels
+            </a>{" "}
+            · Trophy art:{" "}
+            <a href="https://www.vecteezy.com" target="_blank" rel="noreferrer" className="hover:text-foreground">
+              Vecteezy
+            </a>
+          </div>
         </div>
       </div>
     </footer>

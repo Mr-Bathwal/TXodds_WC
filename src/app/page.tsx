@@ -1,17 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { Reveal } from "@/components/landing/Reveal";
 import { Flag } from "@/components/match/Flag";
-import { useTheme } from "@/lib/theme";
-
-const TrophyScene = dynamic(() => import("@/components/three/TrophyScene"), {
-  ssr: false,
-  loading: () => (
-    <div className="absolute inset-0 bg-[radial-gradient(55%_55%_at_50%_45%,rgba(232,185,35,0.08),transparent)]" />
-  ),
-});
 
 const TEAMS: { iso: string; code: string }[] = [
   { iso: "ar", code: "ARG" }, { iso: "br", code: "BRA" }, { iso: "fr", code: "FRA" },
@@ -23,8 +14,6 @@ const TEAMS: { iso: string; code: string }[] = [
 ];
 
 export default function Landing() {
-  const { theme } = useTheme();
-
   return (
     <div className="relative">
       {/* ================= HERO — video + 3D football ================= */}
@@ -40,9 +29,17 @@ export default function Landing() {
         />
         <div className="video-veil" />
 
-        {/* layer 2: interactive 3D trophy — cursor spins it */}
-        <div className="absolute inset-0 z-[2]">
-          <TrophyScene colors={theme.three} />
+        {/* layer 2: the cup (licensed Vecteezy art) — hover: grow, spin, settle */}
+        <div className="absolute bottom-[8%] right-[6%] z-[2] hidden h-[58svh] max-h-[640px] md:block">
+          <div className="float-y h-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/img/trophy.png"
+              alt="Golden World Cup trophy illustration"
+              className="trophy-art h-full w-auto cursor-pointer select-none"
+              draggable={false}
+            />
+          </div>
         </div>
 
         {/* layer 3: type — left-aligned so the ball owns the right half */}
