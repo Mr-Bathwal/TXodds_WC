@@ -13,6 +13,19 @@ export function Flag({
   code: string;
   className?: string;
 }) {
+  // No mapped flag → show a code chip instead of requesting a broken image.
+  if (!iso) {
+    return (
+      <span
+        className={cn(
+          "inline-flex aspect-[4/3] items-center justify-center rounded-[3px] bg-surface-2 text-[9px] font-bold text-muted ring-1 ring-white/10",
+          className,
+        )}
+      >
+        {code}
+      </span>
+    );
+  }
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img

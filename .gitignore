@@ -42,3 +42,7 @@ next-env.d.ts
 
 # local devnet relayer key
 .relayer-devnet.json
+
+# TxLINE devnet signup artifacts
+scripts/.txline-devnet-key.json
+scripts/.txline-creds.json

@@ -16,7 +16,7 @@ let cached: TxLineClient | null = null;
 export function getTxLineClient(): TxLineClient {
   if (cached) return cached;
   const token = process.env.TXLINE_API_TOKEN;
-  cached = token ? new LiveTxLineClient(token) : new MockTxLineClient();
+  cached = token ? new LiveTxLineClient() : new MockTxLineClient();
   return cached;
 }
 
