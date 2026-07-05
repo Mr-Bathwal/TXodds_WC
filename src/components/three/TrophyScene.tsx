@@ -1,16 +1,16 @@
 "use client";
 
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Float, Lightformer, Sparkles } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import * as THREE from "three";
 
 /**
- * Sleek golden championship trophy — landing hero. Smooth spline-lathed
- * silhouette, clean warm-gold lighting (no colored streaks), deliberately
- * compact so the headline owns the page. Cursor movement drives a slow spin;
- * click for a celebratory twirl.
+ * Golden championship trophy — landing hero. Sits perfectly upright and calm;
+ * hovering it makes it swell slightly and take one smooth celebratory spin,
+ * then it eases back to rest in its place. Realistic gold via a clearcoated
+ * physical material.
  */
 
 interface SceneColors {
@@ -22,7 +22,6 @@ interface SceneColors {
 
 function useCup(): THREE.LatheGeometry {
   return useMemo(() => {
-    // Smooth (radius, height) silhouette: wide base → slender stem → flowing bowl.
     const spline = new THREE.SplineCurve([
       new THREE.Vector2(0.46, 0.0),
       new THREE.Vector2(0.44, 0.05),
@@ -44,16 +43,19 @@ function useCup(): THREE.LatheGeometry {
 
 function Trophy({ colors }: { colors: SceneColors }) {
   const group = useRef<THREE.Group>(null);
-  const vel = useRef(0.35);
+  const vel = useRef(0); // spin velocity — only from hover/click impulses
+  const [hovered, setHovered] = useState(false);
   const cup = useCup();
 
   const gold = useMemo(
     () =>
-      new THREE.MeshStandardMaterial({
-        color: "#f0c04a",
+      new THREE.MeshPhysicalMaterial({
+        color: "#f2c14e",
         metalness: 1,
-        roughness: 0.18,
-        envMapIntensity: 1.1,
+        roughness: 0.2,
+        clearcoat: 1,
+        clearcoatRoughness: 0.15,
+        envMapIntensity: 1.15,
       }),
     [],
   );
@@ -70,15 +72,15 @@ function Trophy({ colors }: { colors: SceneColors }) {
 
   useFrame((state, delta) => {
     if (!group.current) return;
-    // Cursor drives the spin; decays back to an idle rotation.
-    const target = 0.35 + state.pointer.x * 1.4;
-    vel.current = THREE.MathUtils.lerp(vel.current, target, delta * 1.5);
+    // Spin impulse decays to stillness — the trophy rests facing forward.
+    vel.current = THREE.MathUtils.lerp(vel.current, 0, delta * 1.6);
     group.current.rotation.y += vel.current * delta;
-    group.current.rotation.x = THREE.MathUtils.lerp(
-      group.current.rotation.x,
-      state.pointer.y * 0.08,
-      0.05,
-    );
+    // Once the spin has died down, ease back to the front-facing pose.
+    if (Math.abs(vel.current) < 0.25) {
+      const settled = Math.round(group.current.rotation.y / (Math.PI * 2)) * Math.PI * 2;
+      group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, settled, delta * 2.5);
+    }
+
     const wide = state.viewport.width > 5.2;
     group.current.position.x = THREE.MathUtils.lerp(
       group.current.position.x,
@@ -87,21 +89,28 @@ function Trophy({ colors }: { colors: SceneColors }) {
     );
     group.current.position.y = THREE.MathUtils.lerp(
       group.current.position.y,
-      (wide ? -0.9 : -1.9) + state.pointer.y * 0.1,
+      wide ? -0.9 : -1.9,
       0.06,
     );
-    const s = wide ? 0.85 : 0.62;
-    group.current.scale.setScalar(THREE.MathUtils.lerp(group.current.scale.x, s, 0.08));
+    const s = (wide ? 0.85 : 0.62) * (hovered ? 1.14 : 1);
+    group.current.scale.setScalar(THREE.MathUtils.lerp(group.current.scale.x, s, 0.09));
   });
 
   return (
-    <Float speed={1.2} rotationIntensity={0.08} floatIntensity={0.35}>
-      <group ref={group} onClick={() => (vel.current = 5)}>
+    <Float speed={1.1} rotationIntensity={0} floatIntensity={0.25}>
+      <group
+        ref={group}
+        onPointerOver={() => {
+          setHovered(true);
+          vel.current = 7; // one smooth celebratory spin
+        }}
+        onPointerOut={() => setHovered(false)}
+        onClick={() => (vel.current = 10)}
+      >
         <mesh material={plinth} position={[0, -0.12, 0]}>
           <cylinderGeometry args={[0.56, 0.62, 0.24, 64]} />
         </mesh>
         <mesh geometry={cup} material={gold} />
-        {/* subtle theme glow on the floor */}
         <mesh position={[0, -0.26, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.72, 0.92, 64]} />
           <meshBasicMaterial color={colors.glow} transparent opacity={0.08} side={THREE.DoubleSide} />
@@ -119,7 +128,6 @@ export default function TrophyScene({ colors }: { colors: SceneColors }) {
       gl={{ antialias: true, alpha: true }}
     >
       <Suspense fallback={null}>
-        {/* clean warm-gold lighting — no colored streaks on the metal */}
         <ambientLight intensity={0.35} />
         <directionalLight position={[6, 8, 4]} intensity={2.2} color="#ffffff" />
         <directionalLight position={[-5, 3, -2]} intensity={0.8} color="#ffe9c4" />
