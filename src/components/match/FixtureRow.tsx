@@ -63,7 +63,14 @@ function Countdown({ kickoff }: { kickoff: string }) {
   );
 }
 
-export function FixtureRow({ fixture }: { fixture: Fixture }) {
+export function FixtureRow({
+  fixture,
+  compact = false,
+}: {
+  fixture: Fixture;
+  /** Tighter type + spacing for narrow column layouts. */
+  compact?: boolean;
+}) {
   const rowRef = useRef<HTMLAnchorElement>(null);
   const isLive = fixture.status === "live" || fixture.status === "halftime";
   const showScore = fixture.status !== "scheduled";
@@ -83,30 +90,34 @@ export function FixtureRow({ fixture }: { fixture: Fixture }) {
       ref={rowRef}
       href={`/match/${fixture.id}`}
       onMouseMove={onMove}
-      className="spot-row group block px-2 py-5 transition-colors sm:px-4"
+      className={cn("spot-row group block transition-colors", compact ? "px-1 py-4" : "px-2 py-5 sm:px-4")}
     >
       {/* line 1 — teams + score */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-8">
+      <div className={cn("grid grid-cols-[1fr_auto_1fr] items-center", compact ? "gap-2" : "gap-4 sm:gap-8")}>
         <div className="flex items-center justify-end gap-3 min-w-0">
           <span
             className={cn(
-              "truncate text-base sm:text-lg transition-colors",
+              "truncate transition-colors",
+              compact ? "text-sm" : "text-base sm:text-lg",
               homeLeads ? "font-bold" : "font-medium",
               "group-hover:text-pitch",
             )}
           >
-            {fixture.home.name}
+            {compact ? fixture.home.code : fixture.home.name}
           </span>
           <Flag
             iso={fixture.home.iso}
             code={fixture.home.code}
-            className="h-6 w-9 shrink-0 transition-all duration-200 group-hover:scale-110 group-hover:ring-pitch/60 group-hover:shadow-[0_0_18px_rgba(26,209,122,0.35)]"
+            className={cn(
+              "shrink-0 transition-all duration-200 group-hover:scale-110 group-hover:ring-pitch/60 group-hover:shadow-[0_0_18px_rgba(26,209,122,0.35)]",
+              compact ? "h-5 w-7" : "h-6 w-9",
+            )}
           />
         </div>
 
-        <div className="min-w-24 text-center">
+        <div className={cn("text-center", compact ? "min-w-16" : "min-w-24")}>
           {showScore ? (
-            <div className="font-mono text-3xl font-bold tabular-nums sm:text-4xl">
+            <div className={cn("font-mono font-bold tabular-nums", compact ? "text-2xl" : "text-3xl sm:text-4xl")}>
               <span className={homeLeads ? "" : awayLeads ? "text-muted/60" : ""}>
                 {fixture.homeScore}
               </span>
@@ -136,25 +147,29 @@ export function FixtureRow({ fixture }: { fixture: Fixture }) {
           <Flag
             iso={fixture.away.iso}
             code={fixture.away.code}
-            className="h-6 w-9 shrink-0 transition-all duration-200 group-hover:scale-110 group-hover:ring-sol-purple/60 group-hover:shadow-[0_0_18px_rgba(153,69,255,0.4)]"
+            className={cn(
+              "shrink-0 transition-all duration-200 group-hover:scale-110 group-hover:ring-sol-purple/60 group-hover:shadow-[0_0_18px_rgba(153,69,255,0.4)]",
+              compact ? "h-5 w-7" : "h-6 w-9",
+            )}
           />
           <span
             className={cn(
-              "truncate text-base sm:text-lg transition-colors",
+              "truncate transition-colors",
+              compact ? "text-sm" : "text-base sm:text-lg",
               awayLeads ? "font-bold" : "font-medium",
               "group-hover:text-sol-purple",
             )}
           >
-            {fixture.away.name}
+            {compact ? fixture.away.code : fixture.away.name}
           </span>
         </div>
       </div>
 
       {/* line 2 — meta + odds */}
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-xs text-muted">
+      <div className={cn("flex flex-wrap items-center justify-between gap-3", compact ? "mt-2" : "mt-3")}>
+        <span className={cn("flex items-center gap-2 text-muted", compact ? "text-[10px]" : "text-xs")}>
           <span aria-hidden>⚽</span>
-          {fixture.stage} · {fixture.venue.split(",")[0]}
+          {compact ? fixture.venue.split(",")[0] : `${fixture.stage} · ${fixture.venue.split(",")[0]}`}
           {fixture.verification && (
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-sol-teal" aria-label="verified on-chain">
               <path d="M12 2 4 5v6c0 5 3.5 8.5 8 11 4.5-2.5 8-6 8-11V5l-8-3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
@@ -163,9 +178,13 @@ export function FixtureRow({ fixture }: { fixture: Fixture }) {
           )}
         </span>
         <div className="flex items-center gap-2">
-          <OddsChip label="1" value={fixture.odds.home} tone="home" />
-          <OddsChip label="X" value={fixture.odds.draw} tone="draw" />
-          <OddsChip label="2" value={fixture.odds.away} tone="away" />
+          {fixture.status !== "finished" && (
+            <>
+              <OddsChip label="1" value={fixture.odds.home} tone="home" />
+              <OddsChip label="X" value={fixture.odds.draw} tone="draw" />
+              <OddsChip label="2" value={fixture.odds.away} tone="away" />
+            </>
+          )}
           <span className="ml-1 hidden text-xs text-pitch opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100 sm:inline">
             →
           </span>

@@ -6,10 +6,10 @@ import { Reveal } from "@/components/landing/Reveal";
 import { Flag } from "@/components/match/Flag";
 import { useTheme } from "@/lib/theme";
 
-const FootballScene = dynamic(() => import("@/components/three/FootballScene"), {
+const TrophyScene = dynamic(() => import("@/components/three/TrophyScene"), {
   ssr: false,
   loading: () => (
-    <div className="absolute inset-0 bg-[radial-gradient(55%_55%_at_50%_45%,rgba(26,209,122,0.10),transparent)]" />
+    <div className="absolute inset-0 bg-[radial-gradient(55%_55%_at_50%_45%,rgba(232,185,35,0.08),transparent)]" />
   ),
 });
 
@@ -40,9 +40,9 @@ export default function Landing() {
         />
         <div className="video-veil" />
 
-        {/* layer 2: interactive 3D football */}
+        {/* layer 2: interactive 3D trophy — cursor spins it */}
         <div className="absolute inset-0 z-[2]">
-          <FootballScene colors={theme.three} />
+          <TrophyScene colors={theme.three} />
         </div>
 
         {/* layer 3: type — left-aligned so the ball owns the right half */}
@@ -92,27 +92,6 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* ================= LIVE NUMBERS — open band, no boxes ================= */}
-      <section className="mx-auto max-w-6xl px-6 py-24">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-4">
-          {[
-            { n: "104", l: "World Cup matches" },
-            { n: "<100ms", l: "TxLINE latency" },
-            { n: "100%", l: "On-chain verifiable" },
-            { n: "0", l: "Gas or seed phrases" },
-          ].map((s, i) => (
-            <Reveal key={s.l} delay={i * 0.08} className="text-center">
-              <div className="text-display ticker-glow text-5xl font-extrabold text-pitch sm:text-6xl">
-                {s.n}
-              </div>
-              <div className="mt-2 text-xs uppercase tracking-[0.2em] text-muted">{s.l}</div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      <div className="rule mx-auto max-w-6xl" />
-
       {/* ================= EDITORIAL FEATURES — open rows ================= */}
       <section className="mx-auto max-w-6xl space-y-24 px-6 py-24">
         {[
@@ -140,9 +119,9 @@ export default function Landing() {
         ].map((f, i) => (
           <Reveal key={f.k}>
             <div
-              className={`flex flex-col gap-6 md:flex-row md:items-end md:gap-14 ${i % 2 ? "md:flex-row-reverse" : ""}`}
+              className={`group flex flex-col gap-6 md:flex-row md:items-end md:gap-14 ${i % 2 ? "md:flex-row-reverse" : ""}`}
             >
-              <div className="text-display text-7xl font-extrabold text-muted/15 sm:text-8xl">
+              <div className="text-display text-7xl font-extrabold text-muted/15 transition-all duration-500 group-hover:scale-110 group-hover:text-pitch/40 group-hover:drop-shadow-[0_0_30px_rgba(26,209,122,0.35)] sm:text-8xl">
                 {f.k}
               </div>
               <div className="max-w-xl">

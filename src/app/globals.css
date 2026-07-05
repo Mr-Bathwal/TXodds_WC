@@ -217,9 +217,9 @@ body::after {
   transition: opacity 0.35s;
   pointer-events: none;
   background: radial-gradient(
-    260px circle at var(--mx, 50%) var(--my, 50%),
-    color-mix(in srgb, var(--pitch) 13%, transparent),
-    transparent 70%
+    320px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--pitch) 26%, transparent),
+    transparent 72%
   );
 }
 .spot-row:hover::before {
