@@ -29,36 +29,23 @@ export default function Landing() {
         />
         <div className="video-veil" />
 
-        {/* layer 2: the cup (licensed Vecteezy art) — hover: grow, spin, settle */}
-        <div className="absolute bottom-[8%] right-[6%] z-[2] hidden h-[58svh] max-h-[640px] md:block">
-          <div className="float-y h-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/img/trophy.png"
-              alt="Golden World Cup trophy illustration"
-              className="trophy-art h-full w-auto cursor-pointer select-none"
-              draggable={false}
-            />
-          </div>
-        </div>
-
-        {/* layer 3: type — left-aligned so the ball owns the right half */}
-        <div className="pointer-events-none relative z-10 mx-auto w-full max-w-6xl px-6">
-          <div className="max-w-2xl text-center sm:text-left">
+        {/* type — centered over the stadium, clean and open */}
+        <div className="pointer-events-none relative z-10 mx-auto w-full max-w-4xl px-6 text-center">
+          <div>
             <div className="reveal mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-4 py-1.5 text-xs text-ice backdrop-blur">
               <span className="h-1.5 w-1.5 rounded-full bg-sol-teal" />
               Powered by TxLINE · Verified on Solana
             </div>
-            <h1 className="text-display text-5xl font-extrabold sm:text-6xl lg:text-7xl">
+            <h1 className="text-display text-5xl font-extrabold sm:text-7xl lg:text-8xl">
               <span className="gradient-text">The beautiful game,</span>
               <br />
               provably fair.
             </h1>
-            <p className="reveal mt-6 max-w-xl text-base text-foreground/80 sm:text-lg">
+            <p className="reveal mx-auto mt-6 max-w-xl text-base text-foreground/80 sm:text-lg">
               Live World Cup data straight from the pitch. Predictions locked on Solana before
-              kickoff. Give the cup a spin — it&rsquo;s yours to play with.
+              kickoff — hashed, timestamped, and impossible to cheat.
             </p>
-            <div className="reveal pointer-events-auto mt-9 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
+            <div className="reveal pointer-events-auto mt-9 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/matches"
                 className="rounded-full bg-pitch px-7 py-3.5 text-sm font-semibold text-background transition-transform hover:scale-105"
