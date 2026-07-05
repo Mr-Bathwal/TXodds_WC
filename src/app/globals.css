@@ -203,24 +203,14 @@ body::after {
   background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
 }
 
-/* Hero trophy art: hover → grow + one smooth spin, then settle back. */
-@keyframes trophyFlip {
-  0% {
-    transform: perspective(1000px) rotateY(0deg) scale(1.05);
-  }
-  100% {
-    transform: perspective(1000px) rotateY(360deg) scale(1.1);
-  }
-}
+/* Hero trophy art: hover → gently grows, settles back on leave. */
 .trophy-art {
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-  transform-style: preserve-3d;
   filter: drop-shadow(0 34px 60px rgba(0, 0, 0, 0.55))
     drop-shadow(0 0 44px rgba(232, 185, 35, 0.16));
 }
 .trophy-art:hover {
-  animation: trophyFlip 0.9s ease-out;
-  transform: scale(1.1);
+  transform: scale(1.09);
 }
 
 /* Cursor spotlight — a soft theme-colored glow that tracks the pointer
