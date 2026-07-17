@@ -46,3 +46,8 @@ next-env.d.ts
 # TxLINE devnet signup artifacts
 scripts/.txline-devnet-key.json
 scripts/.txline-creds.json
+.env.local
+scripts/txline-discover*.mjs
+scripts/txline-explore.mjs
+scripts/txline-goals.mjs
+scripts/txline-scores.mjs

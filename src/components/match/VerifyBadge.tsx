@@ -10,7 +10,9 @@ import { shortAddress } from "@/lib/utils";
  */
 export function VerifyBadge({ verification }: { verification: NonNullable<Fixture["verification"]> }) {
   const [open, setOpen] = useState(false);
-  const explorer = `https://explorer.solana.com/tx/${verification.signature}?cluster=${verification.cluster}`;
+  const explorer =
+    verification.explorerUrl ??
+    `https://explorer.solana.com/tx/${verification.signature}?cluster=${verification.cluster}`;
 
   return (
     <div className="relative">

@@ -69,6 +69,8 @@ export interface Fixture {
     /** Unix seconds of on-chain publication. */
     publishedAt: number;
     cluster: "mainnet-beta" | "devnet" | "testnet";
+    /** Explicit explorer link (program account for live data); overrides the tx link. */
+    explorerUrl?: string;
   };
 }
 
