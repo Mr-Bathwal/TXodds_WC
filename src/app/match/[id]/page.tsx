@@ -22,7 +22,7 @@ function Rule() {
 
 export default function MatchDetail() {
   const params = useParams<{ id: string }>();
-  const { fixture, isLoading } = useFixture(params.id);
+  const { fixture, isLoading } = useFixture(params.id, 5000);
 
   if (isLoading)
     return <p className="mx-auto max-w-4xl px-4 pt-28 text-muted">Loading match…</p>;

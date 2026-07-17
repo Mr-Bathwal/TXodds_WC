@@ -181,14 +181,22 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
   const [row, setRow] = useState<number>(-1);
   if (fixture.status === "scheduled") return null;
 
-  const rows: RowDef[] = [
-    { icon: "possession", label: "Possession", home: stats.possessionHome, away: 100 - stats.possessionHome, format: (n) => `${n}%` },
-    { icon: "xg", label: "Expected goals", home: stats.xg[0], away: stats.xg[1], format: (n) => n.toFixed(2) },
-    { icon: "shots", label: "Shots", home: stats.shots[0], away: stats.shots[1] },
-    { icon: "target", label: "On target", home: stats.onTarget[0], away: stats.onTarget[1] },
-    { icon: "corner", label: "Corners", home: stats.corners[0], away: stats.corners[1] },
-    { icon: "card", label: "Fouls", home: stats.fouls[0], away: stats.fouls[1] },
-  ];
+  // Real per-side stats from TxLINE (live) take precedence; the demo feed shows
+  // the fuller simulated set.
+  const real = fixture.liveStats;
+  const rows: RowDef[] = real
+    ? [
+        { icon: "corner", label: "Corners", home: real.corners[0], away: real.corners[1] },
+        { icon: "card", label: "Yellow cards", home: real.yellowCards[0], away: real.yellowCards[1] },
+      ]
+    : [
+        { icon: "possession", label: "Possession", home: stats.possessionHome, away: 100 - stats.possessionHome, format: (n) => `${n}%` },
+        { icon: "xg", label: "Expected goals", home: stats.xg[0], away: stats.xg[1], format: (n) => n.toFixed(2) },
+        { icon: "shots", label: "Shots", home: stats.shots[0], away: stats.shots[1] },
+        { icon: "target", label: "On target", home: stats.onTarget[0], away: stats.onTarget[1] },
+        { icon: "corner", label: "Corners", home: stats.corners[0], away: stats.corners[1] },
+        { icon: "card", label: "Fouls", home: stats.fouls[0], away: stats.fouls[1] },
+      ];
 
   function onMove(e: React.MouseEvent) {
     const r = ref.current?.getBoundingClientRect();
@@ -206,8 +214,13 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
         setRow(-1);
       }}
     >
-      <h2 className="mb-8 text-center text-xs font-semibold uppercase tracking-[0.3em] text-muted">
+      <h2 className="mb-8 flex items-center justify-center gap-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-muted">
         Match stats
+        {real && (
+          <span className="flex items-center gap-1 rounded-full border border-pitch/30 bg-pitch/5 px-2 py-0.5 text-[10px] normal-case tracking-normal text-pitch">
+            <span className="live-dot h-1 w-1 rounded-full bg-pitch" /> live · TxLINE
+          </span>
+        )}
       </h2>
 
       {/* duel header */}

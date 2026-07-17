@@ -16,7 +16,7 @@ function oddsForPick(fixture: Fixture, pick: Pick): number {
  * anchor its hash on Solana via the relayer, and persist the pending prediction.
  * Throws on failure so the UI can show an error.
  */
-export async function commitPrediction(fixture: Fixture, pick: Pick): Promise<Prediction> {
+export async function commitPrediction(fixture: Fixture, pick: Pick, stake = 100): Promise<Prediction> {
   const { publicKey } = getIdentity();
   const commitment: Commitment = {
     fixtureId: fixture.id,
@@ -57,6 +57,7 @@ export async function commitPrediction(fixture: Fixture, pick: Pick): Promise<Pr
     cluster: anchor.cluster,
     simulated: anchor.simulated,
     oddsAtCommit: oddsForPick(fixture, pick),
+    stake,
     status: "pending",
     points: 0,
   };

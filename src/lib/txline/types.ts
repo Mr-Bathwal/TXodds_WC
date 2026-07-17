@@ -57,6 +57,17 @@ export interface Fixture {
   odds: Odds;
   events: MatchEvent[];
   /**
+   * Real win-probability history from the TxLINE odds time-series (live data
+   * only). Each point is normalised implied probabilities at a moment in time,
+   * so the momentum chart can show how the market actually moved.
+   */
+  oddsHistory?: { t: number; home: number; draw: number; away: number }[];
+  /**
+   * Real per-side secondary stats from the TxLINE score feed (live data only):
+   * cumulative corners and yellow cards, ordered [home, away].
+   */
+  liveStats?: { corners: [number, number]; yellowCards: [number, number] };
+  /**
    * On-chain verification anchor. Present once TxLINE has published this
    * fixture's data Merkle root to Solana. Lets us render a "verify on Solana"
    * proof for scores/results — the trust layer made visible.

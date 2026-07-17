@@ -18,8 +18,10 @@ export interface Prediction {
   explorer: string;
   cluster: string;
   simulated: boolean;
-  /** Decimal odds captured at commit time — drives odds-weighted scoring. */
+  /** Decimal odds captured at commit time — drives the payout. */
   oddsAtCommit: number;
+  /** Points wagered (like a stake). Return if correct = stake × odds. */
+  stake: number;
   status: "pending" | "won" | "lost" | "void";
   points: number;
 }
@@ -50,9 +52,9 @@ export function existingPrediction(fixtureId: string, market: Pick["market"]): P
   return loadPredictions().find((p) => p.fixtureId === fixtureId && p.pick.market === market);
 }
 
-/** Odds-weighted points: bolder (higher-odds) correct calls are worth more. */
-export function pointsFor(oddsAtCommit: number): number {
-  return Math.round(100 * oddsAtCommit);
+/** Payout for a correct call: stake × odds (odds captured at commit time). */
+export function pointsFor(oddsAtCommit: number, stake = 100): number {
+  return Math.round(stake * oddsAtCommit);
 }
 
 function isCorrect(pick: Pick, result: MatchResult): "won" | "lost" | "void" {
@@ -93,7 +95,7 @@ export function settlePending(fixtures: Fixture[]): { updated: Prediction[]; cha
     return {
       ...p,
       status: outcome,
-      points: outcome === "won" ? pointsFor(p.oddsAtCommit) : 0,
+      points: outcome === "won" ? pointsFor(p.oddsAtCommit, p.stake ?? 100) : 0,
     };
   });
   if (changed) save(updated);

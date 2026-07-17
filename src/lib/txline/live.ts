@@ -118,6 +118,34 @@ function mapOdds(raw: RawOdds[] | null, updatedAt: string): { odds: Odds; inRunn
   };
 }
 
+/** Real win-probability history from the odds time-series (normalised %). */
+function mapOddsHistory(raw: RawOdds[] | null): { t: number; home: number; draw: number; away: number }[] {
+  const pts = (raw ?? [])
+    .filter((o) => o.Pct?.length === 3)
+    .map((o) => {
+      const p = o.Pct!.map(Number);
+      const total = p[0] + p[1] + p[2] || 1;
+      return {
+        t: o.Ts,
+        home: +((p[0] / total) * 100).toFixed(1),
+        draw: +((p[1] / total) * 100).toFixed(1),
+        away: +((p[2] / total) * 100).toFixed(1),
+      };
+    })
+    .sort((a, b) => a.t - b.t);
+  // De-dupe identical consecutive points to keep the line clean.
+  return pts.filter((p, i) => i === 0 || p.home !== pts[i - 1].home || p.away !== pts[i - 1].away);
+}
+
+/** Real cumulative secondary stats (corners, yellow cards) from Score.Total. */
+function mapLiveStats(scores: RawScore[] | null): { p1: PartTotals; p2: PartTotals } {
+  const withTotal = [...(scores ?? [])].reverse().find((s) => s.Score?.Participant1?.Total || s.Score?.Participant2?.Total);
+  return {
+    p1: withTotal?.Score?.Participant1?.Total ?? {},
+    p2: withTotal?.Score?.Participant2?.Total ?? {},
+  };
+}
+
 /** Derive status + minute from the score event stream. */
 function mapStatus(scores: RawScore[] | null, startTime: number): { status: MatchStatus; minute: number | null } {
   if (!scores || scores.length === 0) {
@@ -203,14 +231,36 @@ async function buildFixture(raw: RawFixture): Promise<Fixture> {
   const { odds: mappedOdds } = mapOdds(odds, nowIso);
   const { status, minute } = mapStatus(scores, raw.StartTime);
   const { p1, p2, events: rawEvents } = mapScore(scores);
+  const oddsHistoryRaw = mapOddsHistory(odds);
+  const stats = mapLiveStats(scores);
 
   // Participant1/2 -> home/away.
-  const home = raw.Participant1IsHome ? raw.Participant1 : raw.Participant2;
-  const homeId = raw.Participant1IsHome ? raw.Participant1Id : raw.Participant2Id;
-  const away = raw.Participant1IsHome ? raw.Participant2 : raw.Participant1;
-  const awayId = raw.Participant1IsHome ? raw.Participant2Id : raw.Participant1Id;
-  const homeScore = raw.Participant1IsHome ? p1 : p2;
-  const awayScore = raw.Participant1IsHome ? p2 : p1;
+  const p1Home = raw.Participant1IsHome;
+  const home = p1Home ? raw.Participant1 : raw.Participant2;
+  const homeId = p1Home ? raw.Participant1Id : raw.Participant2Id;
+  const away = p1Home ? raw.Participant2 : raw.Participant1;
+  const awayId = p1Home ? raw.Participant2Id : raw.Participant1Id;
+  const homeScore = p1Home ? p1 : p2;
+  const awayScore = p1Home ? p2 : p1;
+
+  // Odds history is participant1=home aligned already (home is p1's implied);
+  // if p2 is home, swap home/away probabilities.
+  const oddsHistory =
+    oddsHistoryRaw.length >= 3
+      ? p1Home
+        ? oddsHistoryRaw
+        : oddsHistoryRaw.map((o) => ({ t: o.t, home: o.away, draw: o.draw, away: o.home }))
+      : undefined;
+
+  const cornersP = [stats.p1.Corners ?? 0, stats.p2.Corners ?? 0] as const;
+  const cardsP = [stats.p1.YellowCards ?? 0, stats.p2.YellowCards ?? 0] as const;
+  const liveStats =
+    status !== "scheduled"
+      ? {
+          corners: (p1Home ? [cornersP[0], cornersP[1]] : [cornersP[1], cornersP[0]]) as [number, number],
+          yellowCards: (p1Home ? [cardsP[0], cardsP[1]] : [cardsP[1], cardsP[0]]) as [number, number],
+        }
+      : undefined;
   const events: MatchEvent[] =
     status === "scheduled"
       ? []
@@ -232,6 +282,8 @@ async function buildFixture(raw: RawFixture): Promise<Fixture> {
     awayScore,
     odds: mappedOdds,
     events,
+    oddsHistory,
+    liveStats,
     verification,
   };
 }

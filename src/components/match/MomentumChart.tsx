@@ -6,11 +6,112 @@ import { computeMomentum } from "@/lib/matchStats";
 import { cn } from "@/lib/utils";
 
 /**
- * Momentum — full-width open canvas, no card chrome. Per-minute pressure bars
- * mirrored around the axis; hovering sweeps a scrubber that reads out the
- * minute and which side was on top. Goals ride the spikes as glowing markers.
+ * Momentum. When the fixture carries a real TxLINE odds time-series
+ * (`oddsHistory`), we render **market momentum** — how the de-margined win
+ * probability actually moved over the match. Otherwise we fall back to the
+ * simulated per-minute pressure view (demo feed).
  */
 export function MomentumChart({ fixture }: { fixture: Fixture }) {
+  if (fixture.oddsHistory && fixture.oddsHistory.length >= 3) {
+    return <MarketMomentum fixture={fixture} />;
+  }
+  return <SimulatedMomentum fixture={fixture} />;
+}
+
+/** Real market momentum: home win probability over time, from TxLINE odds. */
+function MarketMomentum({ fixture }: { fixture: Fixture }) {
+  const hist = fixture.oddsHistory!;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoverX, setHoverX] = useState<number | null>(null);
+
+  const W = 900;
+  const H = 230;
+  const pad = 8;
+  const x = (i: number) => pad + (i / (hist.length - 1)) * (W - 2 * pad);
+  const y = (pct: number) => pad + (1 - pct / 100) * (H - 2 * pad);
+
+  const homePath = hist.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(p.home).toFixed(1)}`).join(" ");
+  const areaPath = `${homePath} L${x(hist.length - 1).toFixed(1)} ${H - pad} L${x(0).toFixed(1)} ${H - pad} Z`;
+
+  const hi =
+    hoverX == null
+      ? hist.length - 1
+      : Math.max(0, Math.min(hist.length - 1, Math.round(((hoverX - pad) / (W - 2 * pad)) * (hist.length - 1))));
+  const cur = hist[hi];
+
+  return (
+    <section className="relative">
+      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">
+          Market momentum
+          <span className="ml-2 normal-case tracking-normal text-pitch">· live win probability</span>
+        </h2>
+        <span className="flex items-center gap-1.5 text-xs text-muted">
+          <span className="live-dot h-1.5 w-1.5 rounded-full bg-pitch" /> from TxLINE odds
+        </span>
+      </div>
+
+      <div className="pointer-events-none absolute right-0 top-0 font-mono text-sm">
+        <span className="text-pitch">{fixture.home.code} {cur.home}%</span>
+        <span className="px-2 text-muted">·</span>
+        <span className="text-sol-purple">{fixture.away.code} {cur.away}%</span>
+      </div>
+
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full cursor-crosshair"
+        onMouseMove={(e) => {
+          const r = svgRef.current?.getBoundingClientRect();
+          if (r) setHoverX(((e.clientX - r.left) / r.width) * W);
+        }}
+        onMouseLeave={() => setHoverX(null)}
+        role="img"
+        aria-label="Win probability over time"
+      >
+        <defs>
+          <linearGradient id="mmFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--pitch)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="var(--pitch)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <line x1={pad} y1={y(50)} x2={W - pad} y2={y(50)} stroke="var(--border)" strokeWidth="1" strokeDasharray="3 5" />
+        <text x={pad + 2} y={y(50) - 4} fontSize="9" fill="var(--muted)">50%</text>
+
+        <path d={areaPath} fill="url(#mmFill)" />
+        <path d={homePath} fill="none" stroke="var(--pitch)" strokeWidth="2.5" strokeLinejoin="round" />
+
+        {fixture.events
+          .filter((e) => e.type === "goal")
+          .map((e, i) => {
+            const gx = pad + (Math.min(e.minute, 90) / 90) * (W - 2 * pad);
+            return (
+              <g key={i}>
+                <line x1={gx} y1={pad} x2={gx} y2={H - pad} stroke="var(--accent)" strokeWidth="1" opacity="0.3" />
+                <circle cx={gx} cy={pad + 8} r="8" fill="var(--background)" stroke="var(--accent)" strokeWidth="1.5" />
+                <text x={gx} y={pad + 11} textAnchor="middle" fontSize="9">⚽</text>
+              </g>
+            );
+          })}
+
+        {hoverX != null && (
+          <g>
+            <line x1={x(hi)} y1={pad} x2={x(hi)} y2={H - pad} stroke="var(--foreground)" strokeWidth="1" opacity="0.35" />
+            <circle cx={x(hi)} cy={y(cur.home)} r="4" fill="var(--pitch)" />
+          </g>
+        )}
+      </svg>
+
+      <div className="mt-2 flex justify-between font-mono text-[10px] text-muted">
+        <span>kickoff</span>
+        <span>{fixture.status === "finished" ? "full time" : "now"}</span>
+      </div>
+    </section>
+  );
+}
+
+/** Simulated per-minute pressure view (demo feed only). */
+function SimulatedMomentum({ fixture }: { fixture: Fixture }) {
   const points = useMemo(() => computeMomentum(fixture), [fixture]);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverMin, setHoverMin] = useState<number | null>(null);
