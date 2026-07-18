@@ -124,16 +124,12 @@ export default function MatchDetail() {
       {showScore && (
         <>
           <Rule />
-          <div className="lg:-mx-16 xl:-mx-32">
+          <div className="grid items-start gap-x-12 gap-y-10 lg:grid-cols-[1.15fr_1fr]">
             <StatsPanel fixture={fixture} />
+            {fixture.live?.events && fixture.live.events.length > 0 && (
+              <LiveEventFeed fixture={fixture} />
+            )}
           </div>
-        </>
-      )}
-
-      {fixture.live?.events && fixture.live.events.length > 0 && (
-        <>
-          <Rule />
-          <LiveEventFeed fixture={fixture} />
         </>
       )}
 
