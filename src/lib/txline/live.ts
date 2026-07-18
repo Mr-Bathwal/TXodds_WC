@@ -82,12 +82,20 @@ interface PartTotals {
   Goals?: number;
   Corners?: number;
   YellowCards?: number;
+  RedCards?: number;
+}
+interface RawTeamLineup {
+  normativeId?: number;
+  lineups?: { rosterNumber?: string; positionId?: number; starter?: boolean }[];
 }
 interface RawScore {
   Ts: number;
   Action?: string;
+  Participant?: number; // 1 or 2
   Clock?: { Running: boolean; Seconds: number };
   Score?: { Participant1?: { Total?: PartTotals }; Participant2?: { Total?: PartTotals } };
+  Data?: Record<string, unknown>;
+  Lineups?: RawTeamLineup[];
 }
 
 interface RawValidation {
@@ -95,6 +103,8 @@ interface RawValidation {
     updateSubTreeRoot?: number[];
     updateStats?: { maxTimestamp?: number };
   };
+  mainTreeProof?: unknown[];
+  subTreeProof?: unknown[];
 }
 
 /* ------------------------------ mapping ------------------------------ */
@@ -188,18 +198,159 @@ function mapScore(scores: RawScore[] | null): { p1: number; p2: number; events: 
   return { p1, p2, events };
 }
 
+/** Decode the full live event stream into the rich LiveDetail (real data). */
+function mapLiveDetail(
+  scores: RawScore[] | null,
+  p1Home: boolean,
+  proofDepth: number | undefined,
+): import("./types").LiveDetail | undefined {
+  if (!scores || scores.length === 0) return undefined;
+
+  // Which side is a Participant (1|2) on?
+  const sideOf = (part?: number): "home" | "away" | undefined =>
+    part == null ? undefined : (part === 1) === p1Home ? "home" : "away";
+  const minuteOf = (s: RawScore) => Math.max(1, Math.min(90, Math.floor((s.Clock?.Seconds ?? 0) / 60) + 1));
+
+  const ACTION_KIND: Record<string, import("./types").FeedKind> = {
+    goal: "goal",
+    shot: "shot",
+    corner: "corner",
+    yellow_card: "yellow",
+    red_card: "red",
+    substitution: "sub",
+    free_kick: "freekick",
+    penalty: "penalty",
+    penalty_outcome: "penalty",
+    var: "var",
+    var_end: "var",
+    injury: "injury",
+    kickoff: "kickoff",
+    halftime_finalised: "halftime",
+    game_finalised: "fulltime",
+  };
+
+  const events: import("./types").FeedEvent[] = [];
+  let posHome = 0,
+    posAway = 0,
+    dangerHome = 0,
+    dangerAway = 0;
+  let shotHome = 0,
+    shotAway = 0,
+    onTHome = 0,
+    onTAway = 0,
+    fkHome = 0,
+    fkAway = 0,
+    redHome = 0,
+    redAway = 0;
+  const subs: import("./types").LiveDetail["subs"] = [];
+  const onTargetOutcomes = new Set(["Goal", "Saved", "GoalDisallowed"]);
+
+  for (const s of scores) {
+    const act = s.Action ?? "";
+    const side = sideOf(s.Participant);
+    const min = minuteOf(s);
+
+    // possession / pressure
+    if (act.endsWith("possession") || act === "possession") {
+      if (side === "home") posHome++;
+      else if (side === "away") posAway++;
+      if (act === "danger_possession" || act === "high_danger_possession" || act === "attack_possession") {
+        if (side === "home") dangerHome++;
+        else if (side === "away") dangerAway++;
+      }
+      continue;
+    }
+    // shots
+    if (act === "shot") {
+      const outcome = (s.Data?.Outcome as string) ?? "";
+      const onT = onTargetOutcomes.has(outcome);
+      if (side === "home") { shotHome++; if (onT) onTHome++; }
+      else if (side === "away") { shotAway++; if (onT) onTAway++; }
+      events.push({ minute: min, kind: "shot", team: side, detail: outcome });
+      continue;
+    }
+    if (act === "free_kick") {
+      if (side === "home") fkHome++;
+      else if (side === "away") fkAway++;
+      continue;
+    }
+    if (act === "red_card") {
+      if (side === "home") redHome++;
+      else if (side === "away") redAway++;
+    }
+    if (act === "substitution") {
+      subs.push({
+        minute: min,
+        team: side ?? "home",
+        inId: Number(s.Data?.PlayerInId ?? 0),
+        outId: Number(s.Data?.PlayerOutId ?? 0),
+      });
+    }
+
+    const kind = ACTION_KIND[act];
+    if (kind && kind !== "shot") {
+      const detail =
+        act === "free_kick"
+          ? (s.Data?.FreeKickType as string)
+          : act === "injury"
+            ? (s.Data?.Outcome as string)
+            : undefined;
+      events.push({ minute: act === "kickoff" ? 0 : min, kind, team: side, detail });
+    }
+  }
+
+  const totalPos = posHome + posAway || 1;
+  const totalDanger = dangerHome + dangerAway || 1;
+
+  // lineups (real shirt numbers + positions)
+  const luEvent = [...scores].reverse().find((s) => s.Lineups && s.Lineups.length >= 2);
+  let lineup: import("./types").LiveDetail["lineup"];
+  if (luEvent?.Lineups && luEvent.Lineups.length >= 2) {
+    const toPlayers = (t: RawTeamLineup) =>
+      (t.lineups ?? [])
+        .filter((p) => p.starter)
+        .map((p) => ({ number: Number(p.rosterNumber ?? 0), positionId: p.positionId ?? 0, starter: true }));
+    const l1 = toPlayers(luEvent.Lineups[0]);
+    const l2 = toPlayers(luEvent.Lineups[1]);
+    if (l1.length && l2.length) lineup = p1Home ? { home: l1, away: l2 } : { home: l2, away: l1 };
+  }
+
+  // meta
+  const metaVal = (a: string, key: string) => {
+    const e = scores.find((s) => s.Action === a);
+    const v = e?.Data?.[key];
+    return Array.isArray(v) ? v.join(", ") : (v as string | undefined);
+  };
+
+  return {
+    events: events.sort((a, b) => a.minute - b.minute),
+    possession: { home: Math.round((posHome / totalPos) * 100), away: Math.round((posAway / totalPos) * 100) },
+    danger: { home: Math.round((dangerHome / totalDanger) * 100), away: Math.round((dangerAway / totalDanger) * 100) },
+    shots: { home: shotHome, away: shotAway, onTargetHome: onTHome, onTargetAway: onTAway },
+    freeKicks: { home: fkHome, away: fkAway },
+    subs,
+    redCards: { home: redHome, away: redAway },
+    lineup,
+    meta: { weather: metaVal("weather", "Conditions"), pitch: metaVal("pitch", "Conditions"), venue: metaVal("venue", "Type") },
+    proofDepth,
+  };
+}
+
 /* ------------------------------ verification (real on-chain proof) ------------------------------ */
 
-const verifCache = new Map<string, { at: number; v: Fixture["verification"] }>();
+const verifCache = new Map<string, { at: number; v: Fixture["verification"]; depth?: number }>();
 
-async function fetchVerification(fixtureId: number): Promise<Fixture["verification"]> {
+async function fetchVerification(
+  fixtureId: number,
+): Promise<{ v: Fixture["verification"]; depth?: number }> {
   const key = String(fixtureId);
   const cached = verifCache.get(key);
-  if (cached && Date.now() - cached.at < 5 * 60_000) return cached.v;
+  if (cached && Date.now() - cached.at < 5 * 60_000) return { v: cached.v, depth: cached.depth };
   try {
     const val = await apiGet<RawValidation>(`/api/fixtures/validation?fixtureId=${fixtureId}`);
     const rootBytes = val.summary?.updateSubTreeRoot;
-    if (!rootBytes?.length) return undefined;
+    const depth = (val.mainTreeProof?.length ?? 0) + (val.subTreeProof?.length ?? 0) || undefined;
+    if (!rootBytes?.length) return { v: undefined, depth };
     const merkleRoot =
       "0x" + rootBytes.map((b) => b.toString(16).padStart(2, "0")).join("");
     const v: Fixture["verification"] = {
@@ -209,10 +360,10 @@ async function fetchVerification(fixtureId: number): Promise<Fixture["verificati
       cluster: CLUSTER,
       explorerUrl: `https://explorer.solana.com/address/${PROGRAM_ID}?cluster=${CLUSTER}`,
     };
-    verifCache.set(key, { at: Date.now(), v });
-    return v;
+    verifCache.set(key, { at: Date.now(), v, depth });
+    return { v, depth };
   } catch {
-    return undefined;
+    return { v: undefined, depth: undefined };
   }
 }
 
@@ -222,11 +373,18 @@ let cache: { at: number; fixtures: Fixture[] } | null = null;
 
 async function buildFixture(raw: RawFixture): Promise<Fixture> {
   const nowIso = new Date().toISOString();
-  const [odds, scores, verification] = await Promise.all([
+  // Scores carry the richest data — retry once on a transient failure.
+  const getScores = () =>
+    apiGet<RawScore[]>(`/api/scores/snapshot/${raw.FixtureId}`).catch(async () => {
+      await new Promise((r) => setTimeout(r, 200));
+      return apiGet<RawScore[]>(`/api/scores/snapshot/${raw.FixtureId}`).catch(() => null);
+    });
+  const [odds, scores, verif] = await Promise.all([
     apiGet<RawOdds[]>(`/api/odds/snapshot/${raw.FixtureId}`).catch(() => null),
-    apiGet<RawScore[]>(`/api/scores/snapshot/${raw.FixtureId}`).catch(() => null),
+    getScores(),
     fetchVerification(raw.FixtureId),
   ]);
+  const verification = verif.v;
 
   const { odds: mappedOdds } = mapOdds(odds, nowIso);
   const { status, minute } = mapStatus(scores, raw.StartTime);
@@ -236,6 +394,7 @@ async function buildFixture(raw: RawFixture): Promise<Fixture> {
 
   // Participant1/2 -> home/away.
   const p1Home = raw.Participant1IsHome;
+  const live = status !== "scheduled" ? mapLiveDetail(scores, p1Home, verif.depth) : undefined;
   const home = p1Home ? raw.Participant1 : raw.Participant2;
   const homeId = p1Home ? raw.Participant1Id : raw.Participant2Id;
   const away = p1Home ? raw.Participant2 : raw.Participant1;
@@ -284,6 +443,7 @@ async function buildFixture(raw: RawFixture): Promise<Fixture> {
     events,
     oddsHistory,
     liveStats,
+    live,
     verification,
   };
 }
@@ -292,7 +452,7 @@ async function loadAll(): Promise<Fixture[]> {
   if (cache && Date.now() - cache.at < CACHE_TTL) return cache.fixtures;
 
   const today = Math.floor(Date.now() / 86_400_000);
-  const days = [today - 2, today - 1, today, today + 1, today + 2, today + 3];
+  const days = [today - 4, today - 3, today - 2, today - 1, today, today + 1, today + 2, today + 3];
 
   const rawMap = new Map<number, RawFixture>();
   await Promise.all(

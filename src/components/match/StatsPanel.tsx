@@ -183,8 +183,21 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
 
   // Real per-side stats from TxLINE (live) take precedence; the demo feed shows
   // the fuller simulated set.
+  const live = fixture.live;
   const real = fixture.liveStats;
-  const rows: RowDef[] = real
+  const rows: RowDef[] = live
+    ? [
+        { icon: "possession", label: "Possession", home: live.possession.home, away: live.possession.away, format: (n) => `${n}%` },
+        { icon: "shots", label: "Shots", home: live.shots.home, away: live.shots.away },
+        { icon: "target", label: "On target", home: live.shots.onTargetHome, away: live.shots.onTargetAway },
+        { icon: "corner", label: "Corners", home: real?.corners[0] ?? 0, away: real?.corners[1] ?? 0 },
+        { icon: "card", label: "Yellow cards", home: real?.yellowCards[0] ?? 0, away: real?.yellowCards[1] ?? 0 },
+        ...(live.redCards.home + live.redCards.away > 0
+          ? [{ icon: "card", label: "Red cards", home: live.redCards.home, away: live.redCards.away }]
+          : []),
+        { icon: "shots", label: "Free kicks", home: live.freeKicks.home, away: live.freeKicks.away },
+      ]
+    : real
     ? [
         { icon: "corner", label: "Corners", home: real.corners[0], away: real.corners[1] },
         { icon: "card", label: "Yellow cards", home: real.yellowCards[0], away: real.yellowCards[1] },
@@ -216,7 +229,7 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
     >
       <h2 className="mb-8 flex items-center justify-center gap-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-muted">
         Match stats
-        {real && (
+        {(live || real) && (
           <span className="flex items-center gap-1 rounded-full border border-pitch/30 bg-pitch/5 px-2 py-0.5 text-[10px] normal-case tracking-normal text-pitch">
             <span className="live-dot h-1 w-1 rounded-full bg-pitch" /> live · TxLINE
           </span>

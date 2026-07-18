@@ -12,6 +12,7 @@ import { StatsPanel } from "@/components/match/StatsPanel";
 import { WinProbability } from "@/components/match/WinProbability";
 import { LineupPitch } from "@/components/match/LineupPitch";
 import { HeadToHead } from "@/components/match/HeadToHead";
+import { LiveEventFeed } from "@/components/match/LiveEventFeed";
 import { Flag } from "@/components/match/Flag";
 import { cn } from "@/lib/utils";
 
@@ -46,13 +47,20 @@ export default function MatchDetail() {
         {/* ambient stadium glow */}
         <div className="pointer-events-none absolute -inset-x-20 -top-24 bottom-0 -z-10 bg-[radial-gradient(55%_65%_at_50%_30%,rgba(26,209,122,0.10),transparent_70%)]" />
 
-        <div className="mb-8 flex items-center justify-center gap-3 text-xs uppercase tracking-[0.25em] text-muted">
+        <div className="mb-4 flex flex-wrap items-center justify-center gap-3 text-xs uppercase tracking-[0.25em] text-muted">
           <span>{fixture.stage}</span>
-          <span className="h-1 w-1 rounded-full bg-border" />
-          <span>{fixture.venue}</span>
           <span className="h-1 w-1 rounded-full bg-border" />
           <StatusBadge fixture={fixture} className="tracking-normal" />
         </div>
+
+        {/* real match context from the TxLINE feed */}
+        {fixture.live?.meta && (fixture.live.meta.weather || fixture.live.meta.pitch || fixture.live.meta.venue) && (
+          <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted">
+            {fixture.live.meta.venue && <span className="rounded-full border border-border px-2 py-0.5 capitalize">{fixture.live.meta.venue} venue</span>}
+            {fixture.live.meta.weather && <span className="rounded-full border border-border px-2 py-0.5">☁ {fixture.live.meta.weather}</span>}
+            {fixture.live.meta.pitch && <span className="rounded-full border border-border px-2 py-0.5">🌱 pitch {fixture.live.meta.pitch}</span>}
+          </div>
+        )}
 
         <div className="flex items-center justify-center gap-8 sm:gap-14">
           <div className="flex flex-1 flex-col items-end gap-3">
@@ -119,6 +127,13 @@ export default function MatchDetail() {
           <div className="lg:-mx-16 xl:-mx-32">
             <StatsPanel fixture={fixture} />
           </div>
+        </>
+      )}
+
+      {fixture.live?.events && fixture.live.events.length > 0 && (
+        <>
+          <Rule />
+          <LiveEventFeed fixture={fixture} />
         </>
       )}
 

@@ -41,6 +41,50 @@ export interface MatchEvent {
   player?: string;
 }
 
+/** A single event in the live play-by-play feed. */
+export type FeedKind =
+  | "goal"
+  | "shot"
+  | "corner"
+  | "yellow"
+  | "red"
+  | "sub"
+  | "freekick"
+  | "penalty"
+  | "var"
+  | "injury"
+  | "kickoff"
+  | "halftime"
+  | "fulltime";
+
+export interface FeedEvent {
+  minute: number;
+  kind: FeedKind;
+  team?: "home" | "away";
+  detail?: string; // e.g. shot outcome, free-kick type
+}
+
+export interface LineupPlayer {
+  number: number; // shirt number
+  positionId: number;
+  starter: boolean;
+}
+
+/** Everything decoded from the TxLINE live event stream + validation. */
+export interface LiveDetail {
+  events: FeedEvent[];
+  possession: { home: number; away: number }; // %
+  danger: { home: number; away: number }; // high-danger possession share %
+  shots: { home: number; away: number; onTargetHome: number; onTargetAway: number };
+  freeKicks: { home: number; away: number };
+  subs: { minute: number; team: "home" | "away"; inId: number; outId: number }[];
+  redCards: { home: number; away: number };
+  lineup?: { home: LineupPlayer[]; away: LineupPlayer[] };
+  meta: { weather?: string; pitch?: string; venue?: string };
+  /** Depth of the Merkle main-tree proof path (on-chain verifiability). */
+  proofDepth?: number;
+}
+
 export interface Fixture {
   id: string;
   stage: string; // e.g. "Round of 32", "Quarter-final"
@@ -67,6 +111,8 @@ export interface Fixture {
    * cumulative corners and yellow cards, ordered [home, away].
    */
   liveStats?: { corners: [number, number]; yellowCards: [number, number] };
+  /** Rich real-time detail decoded from the TxLINE event stream (live only). */
+  live?: LiveDetail;
   /**
    * On-chain verification anchor. Present once TxLINE has published this
    * fixture's data Merkle root to Solana. Lets us render a "verify on Solana"
