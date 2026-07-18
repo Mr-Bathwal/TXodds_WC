@@ -46,10 +46,20 @@ export function LineupPitch({ fixture }: { fixture: Fixture }) {
   const [hover, setHover] = useState<DotPos | null>(null);
   const tiltRef = useRef<HTMLDivElement>(null);
 
-  const dots = useMemo(
-    () => [...layout(home.players, "home", home.rows), ...layout(away.players, "away", away.rows)],
-    [home, away],
-  );
+  // Real lineups (shirt numbers) from TxLINE take over the formation slots; the
+  // fabricated names/ratings are dropped so only real data shows.
+  const realLU = predicted ? undefined : fixture.live?.lineup;
+  const overlay = (players: PlayerSlot[], real?: { number: number }[]) =>
+    real && real.length
+      ? players.map((p, i) => ({ ...p, number: real[i]?.number ?? p.number, name: "", rating: 0, star: false }))
+      : players;
+  const homePlayers = overlay(home.players, realLU?.home);
+  const awayPlayers = overlay(away.players, realLU?.away);
+
+  const dots = [
+    ...layout(homePlayers, "home", home.rows),
+    ...layout(awayPlayers, "away", away.rows),
+  ];
 
   function onMove(e: React.MouseEvent) {
     const el = tiltRef.current;
@@ -72,8 +82,13 @@ export function LineupPitch({ fixture }: { fixture: Fixture }) {
           <span className="text-display text-lg font-bold">{fixture.home.name}</span>
           <span className="font-mono text-sm text-pitch">{home.formation}</span>
         </div>
-        <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">
+        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-muted">
           {predicted ? "Predicted lineups" : "Lineups"}
+          {realLU && (
+            <span className="flex items-center gap-1 rounded-full border border-pitch/30 bg-pitch/5 px-2 py-0.5 text-[10px] normal-case tracking-normal text-pitch">
+              <span className="live-dot h-1 w-1 rounded-full bg-pitch" /> real · TxLINE
+            </span>
+          )}
         </h2>
         <div className="flex items-center gap-3">
           <span className="font-mono text-sm text-sol-purple">{away.formation}</span>

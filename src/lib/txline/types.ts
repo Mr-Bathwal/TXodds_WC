@@ -128,6 +128,8 @@ export interface Fixture {
     cluster: "mainnet-beta" | "devnet" | "testnet";
     /** Explicit explorer link (program account for live data); overrides the tx link. */
     explorerUrl?: string;
+    /** Depth of the Merkle proof path (number of hashes to the on-chain root). */
+    proofDepth?: number;
   };
 }
 

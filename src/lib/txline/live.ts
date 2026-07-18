@@ -359,6 +359,7 @@ async function fetchVerification(
       publishedAt: Math.floor((val.summary?.updateStats?.maxTimestamp ?? Date.now()) / 1000),
       cluster: CLUSTER,
       explorerUrl: `https://explorer.solana.com/address/${PROGRAM_ID}?cluster=${CLUSTER}`,
+      proofDepth: depth,
     };
     verifCache.set(key, { at: Date.now(), v, depth });
     return { v, depth };

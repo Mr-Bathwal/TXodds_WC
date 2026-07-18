@@ -50,6 +50,12 @@ export function VerifyBadge({ verification }: { verification: NonNullable<Fixtur
                 {new Date(verification.publishedAt * 1000).toLocaleTimeString()}
               </dd>
             </div>
+            {verification.proofDepth != null && (
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted">Merkle proof</dt>
+                <dd className="text-foreground">{verification.proofDepth}-node path</dd>
+              </div>
+            )}
             <div className="flex justify-between gap-2">
               <dt className="text-muted">Cluster</dt>
               <dd className="text-sol-teal">{verification.cluster}</dd>
