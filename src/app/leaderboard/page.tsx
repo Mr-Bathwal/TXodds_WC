@@ -167,7 +167,7 @@ export default function LeaderboardPage() {
               <div className="text-display text-5xl font-extrabold text-pitch tabular-nums">
                 {you.points}
               </div>
-              <div className="mt-1 text-[11px] uppercase tracking-[0.25em] text-muted">points</div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.25em] text-muted">balance</div>
             </div>
             <div>
               <div className="text-display text-5xl font-extrabold tabular-nums">

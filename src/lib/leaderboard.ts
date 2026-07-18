@@ -26,7 +26,8 @@ const HANDLES = [
 function seededField(): Omit<LeaderRow, "rank">[] {
   return HANDLES.map((name) => {
     const seed = fnv1a(name);
-    const points = 300 + Math.floor(seededRandom(seed) * 3200);
+    // Bankroll balances — a believable field around/above the 10k starting stack.
+    const points = 6_000 + Math.floor(seededRandom(seed) * 26_000);
     const accuracy = 0.4 + seededRandom(seed + 11) * 0.45;
     const streak = Math.floor(seededRandom(seed + 23) * 6);
     return { name, points, accuracy, streak };

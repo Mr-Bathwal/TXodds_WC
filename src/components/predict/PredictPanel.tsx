@@ -2,14 +2,24 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Fixture } from "@/lib/txline";
-import type { Pick } from "@/lib/solana/commitment";
+import { type Pick, pickLabel } from "@/lib/solana/commitment";
 import { commitPrediction } from "@/lib/commitPrediction";
-import { existingPrediction, pointsFor, type Prediction } from "@/lib/predictions";
+import {
+  canTopUp,
+  getBalance,
+  loadPredictions,
+  MIN_STAKE,
+  pointsFor,
+  START_BALANCE,
+  topUp,
+  TOPUP_AMOUNT,
+  type Prediction,
+} from "@/lib/predictions";
 import { cn, shortAddress } from "@/lib/utils";
 
 type Market = "1x2" | "over_under";
 const OU_LINE = 2.5;
-const STAKES = [100, 250, 500, 1000];
+const PRESETS = [100, 250, 500, 1000];
 
 function oddsForPick(fixture: Fixture, pick: Pick): number {
   if (pick.market === "1x2") return fixture.odds[pick.value];
@@ -24,13 +34,29 @@ export function PredictPanel({ fixture }: { fixture: Fixture }) {
   const [status, setStatus] = useState<"idle" | "signing" | "done" | "error">("idle");
   const [committed, setCommitted] = useState<Prediction | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [balance, setBalance] = useState(START_BALANCE);
+  const [bets, setBets] = useState<Prediction[]>([]);
+
+  useEffect(() => {
+    const refresh = () => {
+      setBalance(getBalance());
+      setBets(loadPredictions().filter((p) => p.fixtureId === fixture.id));
+    };
+    refresh();
+    window.addEventListener("matchpulse:predictions", refresh);
+    return () => window.removeEventListener("matchpulse:predictions", refresh);
+  }, [fixture.id]);
+
+  // keep the stake within the available bankroll
+  useEffect(() => {
+    setStake((s) => Math.min(Math.max(MIN_STAKE, s), Math.max(MIN_STAKE, balance)));
+  }, [balance]);
 
   const closed = fixture.status === "finished";
   const isLive = fixture.status === "live" || fixture.status === "halftime";
-  const existing = existingPrediction(fixture.id, market);
 
   async function handleCommit() {
-    if (!pick) return;
+    if (!pick || stake < MIN_STAKE || stake > balance) return;
     setStatus("signing");
     setError(null);
     try {
@@ -43,7 +69,7 @@ export function PredictPanel({ fixture }: { fixture: Fixture }) {
     }
   }
 
-  if (closed) {
+  if (closed && bets.length === 0) {
     return (
       <section className="py-2 text-center text-sm text-muted">
         Predictions are closed — this match has finished.
@@ -54,6 +80,7 @@ export function PredictPanel({ fixture }: { fixture: Fixture }) {
   const done = status === "done" && committed;
   const selectedOdds = pick ? oddsForPick(fixture, pick) : 0;
   const potential = pick ? pointsFor(selectedOdds, stake) : 0;
+  const insufficient = stake > balance;
 
   const options =
     market === "1x2"
@@ -69,105 +96,154 @@ export function PredictPanel({ fixture }: { fixture: Fixture }) {
 
   return (
     <section>
-      <div className="mb-6 flex items-baseline justify-between">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Predict &amp; Prove</h2>
-        <span className="flex items-center gap-1.5 text-[11px] text-muted">
-          {isLive ? (
-            <>
-              <span className="live-dot h-1.5 w-1.5 rounded-full bg-pitch" />
-              Odds moving live · TxLINE
-            </>
-          ) : (
-            <>
-              <span className="h-1.5 w-1.5 rounded-full bg-sol-teal" />
-              Timestamped on Solana
-            </>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-sm">
+            <span className="text-muted">Balance </span>
+            <span className={cn("font-semibold", balance < 500 ? "text-danger" : "text-pitch")}>
+              {balance.toLocaleString()}
+            </span>
+          </span>
+          {canTopUp() && balance < 2000 && (
+            <button
+              onClick={() => topUp()}
+              className="rounded-full border border-pitch/40 bg-pitch/10 px-2.5 py-0.5 text-[11px] font-semibold text-pitch hover:bg-pitch/20"
+            >
+              + Top up {TOPUP_AMOUNT.toLocaleString()}
+            </button>
           )}
-        </span>
+        </div>
       </div>
 
-      {done ? (
-        <CommittedReceipt prediction={committed!} onReset={() => { setStatus("idle"); setPick(null); setCommitted(null); }} />
-      ) : existing ? (
-        <ExistingPick prediction={existing} />
-      ) : (
+      {!closed && (
         <>
-          <div className="mb-3 flex gap-1 rounded-full bg-surface-2 p-1 text-sm">
-            {(["1x2", "over_under"] as Market[]).map((m) => (
+          {done ? (
+            <CommittedReceipt
+              prediction={committed!}
+              onReset={() => { setStatus("idle"); setPick(null); setCommitted(null); }}
+            />
+          ) : (
+            <>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="flex gap-1 rounded-full bg-surface-2 p-1 text-sm">
+                  {(["1x2", "over_under"] as Market[]).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => { setMarket(m); setPick(null); }}
+                      className={cn(
+                        "rounded-full px-4 py-1.5 transition-colors",
+                        market === m ? "bg-pitch text-background font-semibold" : "text-muted hover:text-foreground",
+                      )}
+                    >
+                      {m === "1x2" ? "Match result" : `Total goals ${OU_LINE}`}
+                    </button>
+                  ))}
+                </div>
+                {isLive && (
+                  <span className="flex items-center gap-1.5 text-[11px] text-muted">
+                    <span className="live-dot h-1.5 w-1.5 rounded-full bg-pitch" /> odds moving live
+                  </span>
+                )}
+              </div>
+
+              <div className={cn("grid gap-2", market === "1x2" ? "grid-cols-3" : "grid-cols-2")}>
+                {options.map((o) => (
+                  <OptionButton
+                    key={o.key}
+                    label={o.label}
+                    odds={o.odds}
+                    points={pointsFor(o.odds, stake)}
+                    live={isLive}
+                    selected={!!pick && pick.market === o.pick.market && pick.value === o.pick.value}
+                    onClick={() => setPick(o.pick as Pick)}
+                  />
+                ))}
+              </div>
+
+              {/* stake — presets + manual entry + max */}
+              <div className="mt-4">
+                <div className="mb-1.5 flex items-center justify-between text-[11px] uppercase tracking-wider text-muted">
+                  <span>Stake</span>
+                  {insufficient && <span className="text-danger">Over balance</span>}
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex flex-1 gap-2">
+                    {PRESETS.map((s) => (
+                      <button
+                        key={s}
+                        disabled={s > balance}
+                        onClick={() => setStake(s)}
+                        className={cn(
+                          "flex-1 rounded-lg border py-1.5 font-mono text-sm transition-colors disabled:opacity-30",
+                          stake === s ? "border-pitch bg-pitch/10 text-pitch" : "border-border text-muted hover:border-pitch/40",
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="number"
+                    min={MIN_STAKE}
+                    max={balance}
+                    value={stake}
+                    onChange={(e) => setStake(Math.max(MIN_STAKE, Math.min(balance, Math.floor(Number(e.target.value) || 0))))}
+                    className={cn(
+                      "w-24 rounded-lg border bg-surface-2 px-2 py-1.5 text-center font-mono text-sm outline-none focus:ring-1 focus:ring-pitch",
+                      insufficient ? "border-danger" : "border-border",
+                    )}
+                  />
+                  <button
+                    onClick={() => setStake(balance)}
+                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted hover:border-pitch/40 hover:text-pitch"
+                  >
+                    Max
+                  </button>
+                </div>
+              </div>
+
               <button
-                key={m}
-                onClick={() => { setMarket(m); setPick(null); }}
+                disabled={!pick || status === "signing" || insufficient || stake < MIN_STAKE}
+                onClick={handleCommit}
                 className={cn(
-                  "flex-1 rounded-full py-1.5 transition-colors",
-                  market === m ? "bg-pitch text-background font-semibold" : "text-muted hover:text-foreground",
+                  "mt-4 w-full rounded-xl py-2.5 text-sm font-semibold transition-all",
+                  !pick || insufficient
+                    ? "cursor-not-allowed bg-surface-2 text-muted"
+                    : "bg-gradient-to-r from-sol-purple to-sol-teal text-background hover:opacity-90",
                 )}
               >
-                {m === "1x2" ? "Match result" : `Total goals ${OU_LINE}`}
+                {status === "signing"
+                  ? "Anchoring on Solana…"
+                  : insufficient
+                    ? "Insufficient balance"
+                    : pick
+                      ? `Stake ${stake.toLocaleString()} → win ${potential.toLocaleString()}`
+                      : "Choose your call"}
               </button>
-            ))}
-          </div>
-
-          <div className={cn("grid gap-2", market === "1x2" ? "grid-cols-3" : "grid-cols-2")}>
-            {options.map((o) => (
-              <OptionButton
-                key={o.key}
-                label={o.label}
-                odds={o.odds}
-                points={pointsFor(o.odds, stake)}
-                live={isLive}
-                selected={!!pick && pick.market === o.pick.market && pick.value === o.pick.value}
-                onClick={() => setPick(o.pick as Pick)}
-              />
-            ))}
-          </div>
-
-          {/* stake selector */}
-          <div className="mt-4">
-            <div className="mb-1.5 flex items-center justify-between text-[11px] uppercase tracking-wider text-muted">
-              <span>Stake</span>
-              <span className="font-mono text-foreground">{stake} pts</span>
-            </div>
-            <div className="flex gap-2">
-              {STAKES.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setStake(s)}
-                  className={cn(
-                    "flex-1 rounded-lg border py-1.5 font-mono text-sm transition-colors",
-                    stake === s ? "border-pitch bg-pitch/10 text-pitch" : "border-border text-muted hover:border-pitch/40",
-                  )}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            disabled={!pick || status === "signing"}
-            onClick={handleCommit}
-            className={cn(
-              "mt-4 w-full rounded-xl py-2.5 text-sm font-semibold transition-all",
-              !pick
-                ? "cursor-not-allowed bg-surface-2 text-muted"
-                : "bg-gradient-to-r from-sol-purple to-sol-teal text-background hover:opacity-90",
-            )}
-          >
-            {status === "signing"
-              ? "Anchoring on Solana…"
-              : pick
-                ? `Lock in ${stake} → win ${potential} pts`
-                : "Choose your call"}
-          </button>
-          {pick && (
-            <p className="mt-2 text-center text-xs text-muted">
-              {isLive
-                ? "Live odds locked at this instant, hashed & anchored on-chain — no changing it later."
-                : "Your pick is hashed & timestamped on-chain before kickoff — no changing it later."}
-            </p>
+              <p className="mt-2 text-center text-xs text-muted">
+                {isLive
+                  ? "Live odds locked at this instant & anchored on-chain. Bet as many times as you like."
+                  : "Each pick is hashed & timestamped on-chain. You can place multiple bets as odds move."}
+              </p>
+              {error && <p className="mt-2 text-center text-xs text-danger">{error}</p>}
+            </>
           )}
-          {error && <p className="mt-2 text-center text-xs text-danger">{error}</p>}
         </>
+      )}
+
+      {/* your bets on this match */}
+      {bets.length > 0 && (
+        <div className="mt-6">
+          <div className="mb-2 text-[11px] uppercase tracking-wider text-muted">
+            Your bets on this match ({bets.length})
+          </div>
+          <div className="divide-y divide-border/40">
+            {bets.map((b) => (
+              <BetRow key={b.id} bet={b} fixture={fixture} />
+            ))}
+          </div>
+        </div>
       )}
     </section>
   );
@@ -186,7 +262,7 @@ function OptionButton({
   odds: number;
   points: number;
   live: boolean;
-  selected: boolean | null;
+  selected: boolean;
   onClick: () => void;
 }) {
   const prev = useRef(odds);
@@ -229,12 +305,47 @@ function OptionButton({
         {live && flash === "down" && <span aria-hidden>▼</span>}
         {odds.toFixed(2)} · {implied}%
       </span>
-      <span className="mt-1 text-[11px] text-pitch">win {points}</span>
+      <span className="mt-1 text-[11px] text-pitch">win {points.toLocaleString()}</span>
     </button>
   );
 }
 
+function BetRow({ bet, fixture }: { bet: Prediction; fixture: Fixture }) {
+  const tone =
+    bet.status === "won"
+      ? "text-pitch"
+      : bet.status === "lost"
+        ? "text-danger"
+        : bet.status === "void"
+          ? "text-muted"
+          : "text-accent";
+  const toWin = Math.round((bet.stake ?? 100) * bet.oddsAtCommit);
+  return (
+    <div className="flex items-center justify-between py-2.5 text-sm">
+      <div className="min-w-0">
+        <span className="font-medium">{pickLabel(bet.pick, fixture.home.code, fixture.away.code)}</span>
+        <span className="ml-2 font-mono text-xs text-muted">
+          {(bet.stake ?? 100).toLocaleString()} @ {bet.oddsAtCommit.toFixed(2)}
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className={cn("font-mono text-xs font-semibold uppercase tracking-wider", tone)}>
+          {bet.status === "pending"
+            ? `to win ${toWin.toLocaleString()}`
+            : bet.status === "won"
+              ? `+${bet.points.toLocaleString()}`
+              : bet.status}
+        </span>
+        <a href={bet.explorer} target="_blank" rel="noreferrer" className="font-mono text-[11px] text-sol-purple hover:underline">
+          {shortAddress(bet.signature, 4)} ↗
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function CommittedReceipt({ prediction, onReset }: { prediction: Prediction; onReset: () => void }) {
+  const stake = prediction.stake ?? 100;
   return (
     <div className="text-center">
       <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-pitch/15">
@@ -242,11 +353,10 @@ function CommittedReceipt({ prediction, onReset }: { prediction: Prediction; onR
           <path d="m5 13 4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
-      <p className="font-semibold">Locked in &amp; anchored on-chain</p>
+      <p className="font-semibold">Bet placed &amp; anchored on-chain</p>
       <p className="mt-1 text-xs text-muted">
-        {prediction.stake} pts staked at {prediction.oddsAtCommit.toFixed(2)} · to win{" "}
-        <span className="text-pitch">{Math.round(prediction.stake * prediction.oddsAtCommit)}</span> — committed{" "}
-        {new Date(prediction.createdAt).toLocaleTimeString()}.
+        {stake.toLocaleString()} staked at {prediction.oddsAtCommit.toFixed(2)} · to win{" "}
+        <span className="text-pitch">{Math.round(stake * prediction.oddsAtCommit).toLocaleString()}</span>
       </p>
       <div className="mt-3 rounded-xl bg-surface-2 p-3 text-left font-mono text-xs">
         <div className="flex justify-between gap-2">
@@ -266,39 +376,9 @@ function CommittedReceipt({ prediction, onReset }: { prediction: Prediction; onR
       >
         {prediction.simulated ? "View anchor (devnet demo) ↗" : "Verify on Solana Explorer ↗"}
       </a>
-      <button onClick={onReset} className="mt-2 text-xs text-muted hover:text-foreground">
-        Make another prediction
+      <button onClick={onReset} className="mt-3 rounded-full bg-pitch px-5 py-1.5 text-xs font-semibold text-background">
+        Place another bet
       </button>
-    </div>
-  );
-}
-
-function ExistingPick({ prediction }: { prediction: Prediction }) {
-  const tone =
-    prediction.status === "won"
-      ? "text-pitch"
-      : prediction.status === "lost"
-        ? "text-danger"
-        : "text-accent";
-  const toWin = Math.round(prediction.stake * prediction.oddsAtCommit);
-  return (
-    <div className="text-center text-sm">
-      <p className="text-muted">
-        You&rsquo;ve staked <span className="font-semibold text-foreground">{prediction.stake}</span> on this market at{" "}
-        {prediction.oddsAtCommit.toFixed(2)}.
-      </p>
-      <p className={cn("mt-1 font-semibold capitalize", tone)}>
-        {prediction.status === "pending" ? `Awaiting result · to win ${toWin}` : prediction.status}
-        {prediction.status === "won" && ` · +${prediction.points} pts`}
-      </p>
-      <a
-        href={prediction.explorer}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-2 inline-block text-xs text-sol-purple hover:underline"
-      >
-        View on-chain proof ↗
-      </a>
     </div>
   );
 }

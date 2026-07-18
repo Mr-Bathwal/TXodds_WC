@@ -71,7 +71,7 @@ export function IdentityBar({ stats }: { stats: UserStats }) {
           <div className="text-display text-6xl font-extrabold text-pitch tabular-nums">
             {stats.points}
           </div>
-          <div className="mt-1 text-xs uppercase tracking-[0.25em] text-muted">points</div>
+          <div className="mt-1 text-xs uppercase tracking-[0.25em] text-muted">balance</div>
         </div>
       </div>
 
