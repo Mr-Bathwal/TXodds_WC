@@ -4,15 +4,48 @@
 >
 > A live match companion built on **TxODDS TxLINE** real-time data, with
 > Solana-anchored data integrity, cryptographically provable predictions,
-> gas-less on-chain commitments, SOL payouts, and an instant Telegram pundit.
+> gas-less on-chain commitments, real SOL payouts, and an instant Telegram pundit.
 
 | | |
 |---|---|
-| **Live app** | https://t-xodds-wc.vercel.app |
-| **Public repo** | https://github.com/Mr-Bathwal/TXodds_WC |
-| **Demo video** | `<VIDEO_URL>` |
-| **Track** | World Cup — Consumer & Fan Experiences |
-| **Chain** | Solana **devnet** (Memo program + SystemProgram transfers) |
+| **🌐 Live app** | **https://t-xodds-wc.vercel.app** |
+| **💻 Public repo** | **https://github.com/Mr-Bathwal/TXodds_WC** |
+| **🎥 Demo video** | `<VIDEO_URL>` |
+| **🏆 Track** | World Cup — Consumer & Fan Experiences |
+| **⛓ Chain** | Solana **devnet** — Memo program (commitments) + SystemProgram (SOL payouts) |
+| **🔗 On-chain proof** | devnet program `6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J` |
+| **📅 Built for** | TxODDS × Solana World Cup Hackathon |
+
+---
+
+## 0 · Executive summary — *why MatchPulse wins*
+
+Most "sports + crypto" projects bolt a wallet onto a scoreboard. MatchPulse does
+the opposite: it takes the one thing TxODDS already does that **nobody else in
+sports data does — publishing a Merkle root of every data batch to Solana — and
+turns it into a fan-facing product feature.** The result is a mainstream-grade
+live match centre where the *data*, the *odds*, and the *fan's own predictions*
+are all independently verifiable on-chain.
+
+It is **not a mockup.** It streams real TxLINE data through five endpoints,
+reconstructs a broadcast-grade match centre server-side, and closes a full
+on-chain loop: sign-in → predict → commit (gas-less) → settle → **claim real
+devnet SOL**. Every screen in the demo is the live product.
+
+**One line:** *SofaScore-grade live experience + Polymarket-grade commitment
+integrity, running on TxODDS rails.*
+
+### Judging-criteria scorecard
+
+| Criterion | How MatchPulse scores | Proof in product |
+|---|---|---|
+| **Fan Accessibility & UX** | Zero-wallet, zero-jargon browsing; the chain is invisible until it helps. Polished Three.js / motion UI a non-crypto fan opens for the match, not the tech. | `/matches`, `/match/[id]` — no sign-up wall |
+| **Real-Time Responsiveness** | 2.5 s server cache while live + SWR 4–5 s polling; scoreboard, clock, timeline and an **odds-derived momentum chart** move with the game. | Live scoreboard + momentum chart = real TxLINE odds time-series |
+| **Originality & Value Creation** | First fan product to **surface TxLINE's on-chain Merkle proof** + provable pre-kickoff predictions. A genuinely new interaction model, not a repackaged feed. | "Verified on-chain" badge → Solana Explorer |
+| **Commercial & Monetization Path** | Distribution is pre-solved (TxODDS' existing B2B clients), 4 revenue lines on one codebase, near-zero marginal cost, sport-agnostic scale. | §7 |
+| **Completeness & Execution** | End-to-end loop live today incl. real SOL payout; honest provenance labels; no fake data. | Predict → commit → settle → **Sign & Claim SOL** |
+| **Requirement: TxLINE as live input** | 5 endpoints, decoded server-side into the entire experience. | §2 |
+| **Requirement: sign up through Solana** | The predict CTA *is* the wallet connect; picks are wallet-signed. | §4 |
 
 ---
 
@@ -37,9 +70,6 @@ mainstream-fan match centre where:
 3. **Payouts are real** — settled winnings are claimable as devnet SOL via a
    signature-verified relayer transfer.
 
-One sentence: *SofaScore-grade live experience + Polymarket-grade
-commitment integrity, on TxODDS rails.*
-
 ---
 
 ## 2 · TxLINE endpoints used (live input)
@@ -53,7 +83,7 @@ All requests authenticated with `Authorization: Bearer <guest JWT>` +
 | 2 | `GET /api/fixtures/snapshot?competitionId={c}&startEpochDay={d}` | Fixture discovery. Fanned out across competitions × {yesterday, today, tomorrow}, deduped by `FixtureId`; `Participant1IsHome` drives home/away mapping. |
 | 3 | `GET /api/odds/snapshot/{fixtureId}` | De-margined 1X2 (`Pct` triplets). Latest snapshot → the odds board & stake payouts; the **full time-series** → re-normalised implied-probability history that drives the live **momentum chart** (the market's heartbeat, not an animation). |
 | 4 | `GET /api/scores/snapshot/{fixtureId}` | The workhorse. We decode the action stream — `kickoff`, `goal`, `corner`, `yellow/red`, `substitution` (PlayerIn/Out), `var`, `possession`/`high_danger_possession`, `free_kick`, `lineups`, `weather`/`pitch`/`venue`, `Clock`, `halftime_finalised`, `game_finalised` — into scoreboard, match clock, play-by-play timeline, real starting XIs, live stats and venue context. |
-| 5 | `GET /api/fixtures/validation?fixtureId={id}` | **The differentiator.** Merkle root + proof path for the fixture's data batch → the in-app "Verified on-chain" badge with Solana Explorer click-through (devnet program `6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J`). |
+| 5 | `GET /api/fixtures/validation?fixtureId={id}` | **The differentiator.** Merkle root + proof path for the fixture's data batch → the in-app "Verified on-chain" badge with Solana Explorer click-through. |
 
 ### Engineering the snapshot feed (technical highlights)
 
@@ -79,7 +109,7 @@ Naively polling it loses history. MatchPulse:
 
 ## 3 · Data honesty by design
 
-A hackathon rule we set ourselves: **never present synthetic data as real.**
+A rule we set ourselves: **never present synthetic data as real.**
 
 Every `LiveDetail` payload carries a provenance tag rendered in the UI:
 
@@ -119,9 +149,12 @@ all times; enrichment only ever *adds* detail, never overrides the feed.
 - **Gas-less UX** (`src/lib/solana/relayer.ts`): the relayer pays fees —
   Polymarket-style frictionless onboarding. Fans sign; they never buy SOL first.
 - **Signature-verified claims** (`/api/claim`): tweetnacl `sign.detached.verify`
-  over the claim message before any transfer leaves the relayer.
+  over the claim message before any transfer leaves the relayer, plus a
+  per-payout cap so the relayer can't be drained.
 - **Wallet-gated predictions**: the predict button *is* the
   `WalletMultiButton` until a wallet is connected — sign-up **through Solana**.
+- **Verification without re-hashing**: fans don't have to trust *us* to trust the
+  data — the Merkle root is TxODDS', already on-chain; we just make it clickable.
 
 ---
 
@@ -142,8 +175,8 @@ model call and nothing else changes.
 |---|---|
 | `/` landing | Three.js hero, live data teaser |
 | `/matches` | All fixtures, live scores & odds ticking (SWR 5 s) |
-| `/match/[id]` | Scoreboard + clock · play-by-play timeline · **odds-derived momentum chart** · stats panel with provenance labels · head-to-head · **3D tilting pitch** with real formation grid + player photos · venue/weather/pitch context · **Verified on-chain badge** |
-| Predict panel | 1X2 + Over/Under 2.5 · live de-margined odds · bankroll & custom stakes · wallet-signed, relayer-anchored commitments with explorer links |
+| `/match/[id]` | Scoreboard + clock · play-by-play timeline (leader-stem markers, never overlapping) · **odds-derived momentum chart** · stats panel with provenance labels · head-to-head · **3D tilting pitch** with real formation grid + player photos · venue/weather/pitch context · **Verified on-chain badge** |
+| Predict panel | 1X2 + Over/Under 2.5 · live de-margined odds · bankroll & custom stakes · wallet-signed, relayer-anchored commitments with explorer links; finished matches show a **settled, read-only market** (winner/loser resolved at the locked odds) |
 | `/predict` | Open positions, settled results at odds-at-commit |
 | `/leaderboard` | Ranked podium (confetti!), surplus → **Sign & Claim devnet SOL** |
 | Telegram | Instant pundit messages on match events |
@@ -153,20 +186,55 @@ GSAP + Motion · SWR · `@solana/web3.js` + wallet-adapter · tweetnacl · bs58.
 
 ---
 
-## 7 · Commercial & monetization path
+## 7 · Commercial & scalability path — *built to lead, not just to demo*
 
-1. **B2B white-label** — TxODDS' existing customers (books, broadcasters, rights
-   holders) need fan-retention surfaces. MatchPulse is a deployable match centre
-   that showcases *their* data with verifiable integrity — a new sales layer on
-   top of the feed business.
-2. **Affiliate conversion** — the odds surface and prediction habit loop are a
-   natural licensed-operator funnel in regulated markets.
-3. **"Verified data" as premium trust product** — the on-chain badge is a
-   marketable differentiator vs. every unverifiable competitor app.
-4. **Premium pundit** — the Telegram webhook upgrades to personalised,
-   multi-league, TTS-ready commentary as a subscription.
-5. **On-chain rails are already live** — points → SOL claims prove the
-   wallet-payout loop; the same rails carry real economies post-hackathon.
+MatchPulse is engineered so the **hardest problem for any consumer app —
+distribution — is already solved**, and the economics stay healthy at scale.
+
+### 7.1 Distribution moat (why we don't have a cold-start problem)
+
+TxODDS already licenses TxLINE to **hundreds of sportsbooks, broadcasters and
+rights holders**. Those partners are perennially short of *fan-retention
+surfaces* — polished second-screen experiences that keep users engaged around
+their own data. MatchPulse is exactly that surface, white-label-ready.
+**TxODDS' existing B2B clients are our go-to-market channel and our customers on
+day one** — a new upsell layer on top of the feed business, not a new audience
+to acquire from scratch.
+
+### 7.2 Four revenue lines on one codebase
+
+| Line | Model | Who pays |
+|---|---|---|
+| **B2B white-label licence** | Per-operator SaaS (branding, domains, feature flags) | Books / broadcasters / federations |
+| **Affiliate & rev-share** | Warm hand-off from the odds surface & prediction habit loop to licensed operators | Regulated sportsbooks |
+| **"Proof" trust product** | The on-chain Verified-data badge sold as a premium, marketable integrity feature | Operators competing on trust |
+| **Sponsored predictions / branded leaderboards** | Sponsored markets, branded podiums, premium multi-league TTS pundit subscription | Brands + power fans |
+
+### 7.3 Unit economics & scale
+
+- **Marginal cost ≈ zero.** A server-side cache (2.5 s live TTL) absorbs read
+  fan-out, so 1 user and 100k users hit TxLINE at nearly the same rate. The
+  gas-less relayer batches commitments onto Solana, where fees are a **fraction
+  of a cent** — anchoring *millions* of predictions doesn't break the model.
+- **Sport- and league-agnostic.** The exact same decoding pipeline runs *any*
+  competition TxODDS covers. World Cup → year-round product (domestic leagues,
+  other sports) with **zero re-architecture** — the tournament is the wedge,
+  not the ceiling.
+- **Defensible.** The trust layer rides TxODDS' own on-chain publishing, so it
+  can't be cloned without the data partnership — the moat is structural.
+- **Retention flywheel.** Provable leaderboards + the zero-cost Telegram pundit
+  drive habitual match-day returns and a natural viral loop (shareable,
+  verifiable picks).
+
+### 7.4 Differentiation vs. the field
+
+| | Generic score app | Web3 betting dapp | **MatchPulse** |
+|---|---|---|---|
+| Real licensed live data | ✅ | ⚠️ scraped | ✅ **TxLINE** |
+| Data you can verify on-chain | ❌ | ❌ | ✅ **Merkle proof surfaced** |
+| Predictions provably locked pre-event | ❌ | ⚠️ on-chain but costly | ✅ **gas-less commit** |
+| Mainstream, no-wallet-first UX | ✅ | ❌ | ✅ |
+| Distribution ready | — | cold start | ✅ **TxODDS clients** |
 
 ---
 
@@ -177,6 +245,8 @@ GSAP + Motion · SWR · `@solana/web3.js` + wallet-adapter · tweetnacl · bs58.
 - The enrichment cache is in-process; Redis/KV would harden it on serverless.
 - Reveal-phase verification (publishing the pre-image of a commitment after
   settlement) is designed but not yet surfaced in the UI.
+- Points/SOL economy is a devnet demo; mainnet requires the usual custody,
+  compliance and regulated-market gating (deliberately out of hackathon scope).
 
 ---
 
@@ -211,6 +281,19 @@ GSAP + Motion · SWR · `@solana/web3.js` + wallet-adapter · tweetnacl · bs58.
 
 We'd happily contribute our decoding layer (`src/lib/txline/`) back as a
 community TypeScript SDK — it's already typed, documented and provider-agnostic.
+
+---
+
+## 10 · Repository map (for reviewers)
+
+| Path | What's there |
+|---|---|
+| `src/lib/txline/` | TxLINE client, auth, snapshot decoding, score reconstruction — the data engine |
+| `src/lib/solana/` | Commitment hashing, relayer, identity, on-chain verification |
+| `src/app/api/` | `commit`, `claim`, `fixtures`, `webhooks/txline` route handlers |
+| `src/components/match/` | Scoreboard, timeline, momentum chart, stats, 3D pitch |
+| `src/components/predict/` | Wallet-gated prediction market & receipts |
+| `docs/SUBMISSION.md` | This document |
 
 ---
 

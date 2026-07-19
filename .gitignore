@@ -55,3 +55,6 @@ scripts/txline-scores.mjs
 # local AI-session files
 .claude/
 handoff_to_claude.md
+
+# internal-only: demo recording teleprompter script (kept local, not published)
+docs/DEMO_SCRIPT.md
