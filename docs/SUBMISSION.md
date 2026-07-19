@@ -8,8 +8,8 @@
 
 | | |
 |---|---|
-| **Live app** | `<VERCEL_URL>` |
-| **Public repo** | `<GITHUB_URL>` |
+| **Live app** | https://t-xodds-wc.vercel.app |
+| **Public repo** | https://github.com/Mr-Bathwal/TXodds_WC |
 | **Demo video** | `<VIDEO_URL>` |
 | **Track** | World Cup — Consumer & Fan Experiences |
 | **Chain** | Solana **devnet** (Memo program + SystemProgram transfers) |
