@@ -34,6 +34,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
+  // Bound the payout so a crafted request can't drain the devnet relayer.
+  const MAX_CLAIM_SOL = 0.5;
+  if (typeof amountSOL !== "number" || !Number.isFinite(amountSOL) || amountSOL <= 0 || amountSOL > MAX_CLAIM_SOL) {
+    return NextResponse.json({ error: `Invalid amount (max ${MAX_CLAIM_SOL} SOL per claim)` }, { status: 400 });
+  }
+
   // 1. Verify the signature
   try {
     const valid = nacl.sign.detached.verify(
