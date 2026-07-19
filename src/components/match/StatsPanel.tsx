@@ -92,8 +92,8 @@ function StatRow({
     <div
       onMouseEnter={onEnter}
       className={cn(
-        "relative rounded-2xl px-4 py-4 transition-all duration-300 sm:px-8",
-        active && "scale-[1.015] bg-gradient-to-r from-pitch/[0.06] via-surface/60 to-sol-purple/[0.06]",
+        "relative px-4 py-4 transition-colors duration-300 sm:px-8",
+        active && "bg-gradient-to-r from-pitch/[0.06] via-surface/60 to-sol-purple/[0.06]",
       )}
     >
       <div className="flex items-center justify-between">
@@ -195,7 +195,7 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
         ...(live.redCards.home + live.redCards.away > 0
           ? [{ icon: "card", label: "Red cards", home: live.redCards.home, away: live.redCards.away }]
           : []),
-        { icon: "shots", label: "Free kicks", home: live.freeKicks.home, away: live.freeKicks.away },
+        { icon: "shots", label: live.source === "api-football" ? "Fouls" : "Free kicks", home: live.freeKicks.home, away: live.freeKicks.away },
       ]
     : real
     ? [
@@ -231,7 +231,8 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
         Match stats
         {(live || real) && (
           <span className="flex items-center gap-1 rounded-full border border-pitch/30 bg-pitch/5 px-2 py-0.5 text-[10px] normal-case tracking-normal text-pitch">
-            <span className="live-dot h-1 w-1 rounded-full bg-pitch" /> live · TxLINE
+            <span className="live-dot h-1 w-1 rounded-full bg-pitch" />
+            {live?.source === "api-football" ? "real · API-Football" : live?.source === "synth" ? "estimated" : "live · TxLINE"}
           </span>
         )}
       </h2>
@@ -279,7 +280,7 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
         </div>
       </div>
 
-      <div className="space-y-1">
+      <div className="overflow-hidden rounded-2xl border border-border/40 bg-surface/20 divide-y divide-border/25">
         {rows.map((def, i) => (
           <StatRow key={def.label} def={def} side={side} active={row === i} onEnter={() => setRow(i)} />
         ))}

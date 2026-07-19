@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/theme";
 import { useFixtures } from "@/lib/hooks";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 const NAV = [
   { href: "/matches", label: "Live" },
@@ -15,7 +16,7 @@ const NAV = [
 export function Header() {
   const pathname = usePathname();
   const { theme, cycle } = useTheme();
-  const { data } = useFixtures(30_000);
+  const { data } = useFixtures(10_000);
   const liveCount =
     data?.fixtures.filter((f) => f.status === "live" || f.status === "halftime").length ?? 0;
 
@@ -57,7 +58,8 @@ export function Header() {
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-4">
+          <WalletMultiButton style={{ height: "32px", fontSize: "12px", borderRadius: "9999px", background: "rgba(255, 255, 255, 0.1)", padding: "0 16px" }} />
           <button
             onClick={cycle}
             title={`Theme: ${theme.label} — click to switch`}

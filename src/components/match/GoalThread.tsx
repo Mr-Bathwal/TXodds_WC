@@ -15,7 +15,20 @@ export function GoalThread({ fixture }: { fixture: Fixture }) {
   const minute = fixture.minute ?? 0;
   const isLive = fixture.status === "live" || fixture.status === "halftime";
   const pct = (m: number) => `${(Math.min(m, 90) / 90) * 100}%`;
-  const goals = fixture.events.filter((e) => e.type === "goal");
+
+  // The TxLINE feed confirms scores at checkpoints, so several goals can share a
+  // minute; group same-minute/same-team goals into one chip (with a ×N badge)
+  // so they don't stack invisibly on top of each other.
+  const grouped = Object.values(
+    fixture.events
+      .filter((e) => e.type === "goal")
+      .reduce<Record<string, { minute: number; team?: "home" | "away"; count: number }>>((acc, e) => {
+        const key = `${e.minute}-${e.team}`;
+        if (acc[key]) acc[key].count++;
+        else acc[key] = { minute: e.minute, team: e.team, count: 1 };
+        return acc;
+      }, {}),
+  ).sort((a, b) => a.minute - b.minute);
 
   return (
     <div className="relative mx-auto mt-4 h-32 w-full max-w-3xl px-2">
@@ -40,7 +53,7 @@ export function GoalThread({ fixture }: { fixture: Fixture }) {
       )}
 
       {/* goal clouds */}
-      {goals.map((g, i) => {
+      {grouped.map((g, i) => {
         const home = g.team === "home";
         return (
           <div
@@ -51,7 +64,7 @@ export function GoalThread({ fixture }: { fixture: Fixture }) {
             )}
             style={{ left: pct(g.minute) }}
           >
-            {home && <GoalCloud minute={g.minute} code={fixture.home.code} tone="pitch" />}
+            {home && <GoalCloud minute={g.minute} code={fixture.home.code} tone="pitch" count={g.count} />}
             <div
               className={cn(
                 "w-px flex-1",
@@ -60,7 +73,7 @@ export function GoalThread({ fixture }: { fixture: Fixture }) {
                   : "bg-gradient-to-t from-sol-purple/70 to-transparent",
               )}
             />
-            {!home && <GoalCloud minute={g.minute} code={fixture.away.code} tone="purple" />}
+            {!home && <GoalCloud minute={g.minute} code={fixture.away.code} tone="purple" count={g.count} />}
           </div>
         );
       })}
@@ -79,10 +92,12 @@ function GoalCloud({
   minute,
   code,
   tone,
+  count = 1,
 }: {
   minute: number;
   code: string;
   tone: "pitch" | "purple";
+  count?: number;
 }) {
   return (
     <div
@@ -92,6 +107,9 @@ function GoalCloud({
       )}
     >
       <span aria-hidden>⚽</span>
+      {count > 1 && (
+        <span className={cn("font-bold", tone === "pitch" ? "text-pitch" : "text-sol-purple")}>×{count}</span>
+      )}
       <span className="font-mono text-muted">{minute}&rsquo;</span>
       <span className={cn("font-semibold", tone === "pitch" ? "text-pitch" : "text-sol-purple")}>
         {code}

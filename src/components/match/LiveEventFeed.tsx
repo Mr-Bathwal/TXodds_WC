@@ -2,13 +2,7 @@
 
 import type { Fixture, FeedEvent, FeedKind } from "@/lib/txline";
 import { cn } from "@/lib/utils";
-
-/**
- * Live play-by-play — the full TxLINE event stream rendered as a commentary
- * feed. Surfaces every event type the feed emits: goals, shots (with outcome),
- * corners, cards, substitutions, free kicks, penalties, VAR, injuries, and the
- * kickoff / half-time / full-time markers. Newest first.
- */
+import { useState } from "react";
 
 const META: Record<FeedKind, { icon: string; label: string; accent?: boolean }> = {
   goal: { icon: "⚽", label: "Goal", accent: true },
@@ -26,90 +20,100 @@ const META: Record<FeedKind, { icon: string; label: string; accent?: boolean }> 
   fulltime: { icon: "🏁", label: "Full-time" },
 };
 
-function Row({ e, homeCode, awayCode }: { e: FeedEvent; homeCode: string; awayCode: string }) {
-  const m = META[e.kind];
-  const system = e.kind === "kickoff" || e.kind === "halftime" || e.kind === "fulltime";
-  const teamCode = e.team === "home" ? homeCode : e.team === "away" ? awayCode : null;
-
-  if (system) {
-    return (
-      <div className="flex items-center gap-3 py-2">
-        <span className="w-9 shrink-0 text-center font-mono text-[11px] text-muted">
-          {e.minute > 0 ? `${e.minute}'` : "—"}
-        </span>
-        <span className="flex-1 border-t border-dashed border-border/60" />
-        <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted">
-          {m.icon} {m.label}
-        </span>
-        <span className="flex-1 border-t border-dashed border-border/60" />
-      </div>
-    );
-  }
-
-  const home = e.team === "home";
-  return (
-    <div className="group grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-2">
-      {/* home side */}
-      <div className={cn("text-sm", home ? "text-right" : "opacity-0")}>
-        {home && <EventBody m={m} kind={e.kind} detail={e.detail} teamCode={teamCode} />}
-      </div>
-      <span
-        className={cn(
-          "flex h-7 w-9 shrink-0 items-center justify-center rounded-full border font-mono text-[11px]",
-          m.accent ? "border-pitch/50 bg-pitch/10 text-pitch" : "border-border bg-surface text-muted",
-        )}
-      >
-        {e.minute}&rsquo;
-      </span>
-      <div className={cn("text-sm", !home ? "text-left" : "opacity-0")}>
-        {!home && <EventBody m={m} kind={e.kind} detail={e.detail} teamCode={teamCode} />}
-      </div>
-    </div>
-  );
-}
-
-function EventBody({
-  m,
-  kind,
-  detail,
-  teamCode,
-}: {
-  m: { icon: string; label: string; accent?: boolean };
-  kind: FeedKind;
-  detail?: string;
-  teamCode: string | null;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span aria-hidden>{m.icon}</span>
-      <span className={cn(kind === "goal" || kind === "red" ? "font-semibold" : "font-medium")}>
-        {m.label}
-        {detail ? ` · ${detail}` : ""}
-      </span>
-      {teamCode && <span className="text-xs text-muted">{teamCode}</span>}
-    </span>
-  );
-}
-
 export function LiveEventFeed({ fixture }: { fixture: Fixture }) {
   const events = fixture.live?.events;
   if (!events || events.length === 0) return null;
-  const ordered = [...events].reverse(); // newest first
+
+  // Filter out system events like kickoff, halftime, fulltime for the timeline if desired,
+  // or keep them. Let's keep them and position them at 0, 45, 90.
+  const maxMinute = Math.max(90, ...events.map((e) => e.minute));
+  
+  // Group events by minute to handle overlaps (stack them vertically if same minute)
+  const groupedEvents: Record<number, FeedEvent[]> = {};
+  events.forEach((e) => {
+    if (!groupedEvents[e.minute]) groupedEvents[e.minute] = [];
+    groupedEvents[e.minute].push(e);
+  });
 
   return (
-    <section>
-      <div className="mb-6 flex items-baseline justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Live feed</h2>
+    <section className="flex flex-col h-full justify-center min-h-[180px]">
+      <div className="mb-10 flex items-baseline justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Live Timeline</h2>
         <span className="flex items-center gap-1.5 text-[11px] text-muted">
           <span className="live-dot h-1.5 w-1.5 rounded-full bg-pitch" />
-          {events.length} events · TxLINE
+          {events.length} events · {fixture.live?.source === "api-football" ? "API-Football" : fixture.live?.source === "synth" ? "estimated" : "TxLINE"}
         </span>
       </div>
-      <div className="max-h-[460px] divide-y divide-border/40 overflow-y-auto pr-1">
-        {ordered.map((e, i) => (
-          <Row key={i} e={e} homeCode={fixture.home.code} awayCode={fixture.away.code} />
+
+      <div className="relative w-full px-4 pt-12 pb-8">
+        {/* The timeline axis */}
+        <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-surface-2" />
+        <div 
+          className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-gradient-to-r from-pitch-dim to-pitch transition-all duration-1000"
+          style={{ width: `${Math.min(100, ((fixture.minute ?? maxMinute) / maxMinute) * 100)}%` }}
+        />
+
+        {/* Timeline markers for 0, 45, 90 */}
+        {[0, 45, 90].map((m) => (
+          <div key={`marker-${m}`} className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center" style={{ left: `${(m / maxMinute) * 100}%` }}>
+            <div className="h-2 w-0.5 bg-muted/30 mb-8" />
+            <span className="text-[10px] text-muted absolute top-8">{m}&#39;</span>
+          </div>
         ))}
+
+        {/* Events */}
+        {Object.entries(groupedEvents).map(([minuteStr, evs]) => {
+          const minute = parseInt(minuteStr, 10);
+          const percent = (minute / maxMinute) * 100;
+          
+          return (
+            <div 
+              key={minute}
+              className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-row items-center gap-0.5 group z-10"
+              style={{ left: `${percent}%` }}
+            >
+              {evs.map((e, i) => {
+                const m = META[e.kind];
+                const isTop = e.team === "home" || (e.team !== "away" && i % 2 === 0);
+                
+                return (
+                  <div key={i} className="relative cursor-default flex flex-col items-center justify-center">
+                    <span 
+                      className={cn(
+                        "flex h-7 w-7 items-center justify-center rounded-full border bg-surface text-[14px] shadow-sm transition-transform hover:scale-125 z-10",
+                        m.accent ? "border-pitch text-pitch" : "border-border/50"
+                      )}
+                    >
+                      {m.icon}
+                    </span>
+                    
+                    {/* Tooltip */}
+                    <div className={cn(
+                      "pointer-events-none absolute opacity-0 transition-opacity group-hover:opacity-100 flex flex-col items-center z-20 w-max max-w-[140px] rounded-lg border border-border/60 bg-surface-3 px-3 py-2 text-[11px] text-foreground shadow-xl",
+                      isTop ? "bottom-full mb-2" : "top-full mt-2"
+                    )}>
+                      <span className="font-semibold">{m.label} {minute}&#39;</span>
+                      {e.detail && <span className="text-center truncate w-full text-muted mt-0.5">{e.detail}</span>}
+                      {e.team && <span className="text-[10px] text-pitch mt-0.5">{e.team === "home" ? fixture.home.name : fixture.away.name}</span>}
+                      
+                      {/* Triangle pointer */}
+                      <div className={cn(
+                        "absolute left-1/2 -ml-1.5 border-[6px] border-transparent",
+                        isTop ? "top-full border-t-surface-3" : "bottom-full border-b-surface-3"
+                      )} />
+                      <div className={cn(
+                        "absolute left-1/2 -ml-[7px] border-[7px] border-transparent -z-10",
+                        isTop ? "top-full border-t-border/60" : "bottom-full border-b-border/60"
+                      )} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
 }
+

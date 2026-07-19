@@ -16,16 +16,30 @@ function oddsForPick(fixture: Fixture, pick: Pick): number {
  * anchor its hash on Solana via the relayer, and persist the pending prediction.
  * Throws on failure so the UI can show an error.
  */
-export async function commitPrediction(fixture: Fixture, pick: Pick, stake = 100): Promise<Prediction> {
-  const { publicKey } = getIdentity();
+export async function commitPrediction(
+  fixture: Fixture,
+  pick: Pick,
+  stake = 100,
+  wallet?: { publicKey: string; signMessage: (msg: Uint8Array) => Promise<Uint8Array> }
+): Promise<Prediction> {
+  const authorPubkey = wallet ? wallet.publicKey : getIdentity().publicKey;
   const commitment: Commitment = {
     fixtureId: fixture.id,
     pick,
     nonce: crypto.randomUUID(),
     createdAt: Date.now(),
-    author: publicKey,
+    author: authorPubkey,
   };
-  const signature = signMessage(serializeCommitment(commitment));
+  const messageStr = serializeCommitment(commitment);
+  let signature: string;
+  if (wallet) {
+    const sigBytes = await wallet.signMessage(new TextEncoder().encode(messageStr));
+    // bs58 encode the Uint8Array signature from the wallet
+    const bs58 = (await import("bs58")).default;
+    signature = bs58.encode(sigBytes);
+  } else {
+    signature = signMessage(messageStr);
+  }
 
   const res = await fetch("/api/commit", {
     method: "POST",

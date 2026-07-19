@@ -210,13 +210,25 @@ function SimulatedMomentum({ fixture }: { fixture: Fixture }) {
         {/* goal markers */}
         {points
           .filter((p) => p.goal)
-          .map((p) => {
-            const x = (p.minute - 1) * barW + barW / 2;
-            const y = p.goal === "home" ? 16 : H - 16;
+          .reduce((acc, p) => {
+            // Group goals by minute to detect overlaps
+            const existing = acc.find((g) => g.p.minute === p.minute && g.p.goal === p.goal);
+            if (existing) {
+              existing.count++;
+            } else {
+              acc.push({ p, count: 1 });
+            }
+            return acc;
+          }, [] as Array<{ p: typeof points[0]; count: number }>)
+          .map((g) => {
+            const x = (g.p.minute - 1) * barW + barW / 2;
+            const baseY = g.p.goal === "home" ? 16 : H - 16;
+            // Offset overlapping goals horizontally (±8px per duplicate)
+            const offset = g.count > 1 ? ((g.count - 1) * 8) % 16 - 8 : 0;
             return (
-              <g key={`g${p.minute}`}>
-                <circle cx={x} cy={y} r="10" fill="var(--background)" stroke="var(--accent)" strokeWidth="1.5" />
-                <text x={x} y={y + 4} textAnchor="middle" fontSize="11">⚽</text>
+              <g key={`g${g.p.minute}${g.p.goal}`}>
+                <circle cx={x + offset} cy={baseY} r="10" fill="var(--background)" stroke="var(--accent)" strokeWidth="1.5" />
+                <text x={x + offset} y={baseY + 4} textAnchor="middle" fontSize="11">⚽</text>
               </g>
             );
           })}

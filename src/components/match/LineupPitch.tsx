@@ -23,18 +23,29 @@ function ratingTone(r: number): string {
 }
 
 interface DotPos {
-  p: PlayerSlot;
+  p: any;
   x: number;
   y: number;
   side: "home" | "away";
 }
 
 /** Horizontal layout: rows advance along X from each goal; p.x spreads on Y. */
-function layout(players: PlayerSlot[], side: "home" | "away", rows: number): DotPos[] {
+function layout(players: any[], side: "home" | "away", rows: number): DotPos[] {
+  const hasGrid = players.some(p => p.gridX && p.gridY);
+  const maxRow = hasGrid ? Math.max(...players.map(p => p.gridY || 1)) : rows;
+
   return players.map((p) => {
-    const depth = (p.row + 0.7) / (rows + 0.9);
+    const row = p.gridY ? p.gridY - 1 : p.row;
+    let px = p.x;
+    if (hasGrid && p.gridY && p.gridX) {
+       const rowPlayers = players.filter(rp => rp.gridY === p.gridY);
+       const cols = rowPlayers.length;
+       px = ((p.gridX - 0.5) / cols) * 100;
+    }
+
+    const depth = (row + 0.7) / (maxRow + 0.9);
     const x = side === "home" ? depth * (W / 2 - 60) + 40 : W - (depth * (W / 2 - 60) + 40);
-    const y = (side === "home" ? p.x : 100 - p.x) * ((H - 90) / 100) + 45;
+    const y = (side === "home" ? px : 100 - px) * ((H - 90) / 100) + 45;
     return { p, x, y, side };
   });
 }
@@ -46,12 +57,15 @@ export function LineupPitch({ fixture }: { fixture: Fixture }) {
   const [hover, setHover] = useState<DotPos | null>(null);
   const tiltRef = useRef<HTMLDivElement>(null);
 
-  // Real lineups (shirt numbers) from TxLINE take over the formation slots; the
-  // fabricated names/ratings are dropped so only real data shows.
+  // Real lineups (shirt numbers) from TxLINE take over the formation slots; preserve
+  // predicted names as context since TxLINE doesn't include full player data.
   const realLU = predicted ? undefined : fixture.live?.lineup;
-  const overlay = (players: PlayerSlot[], real?: { number: number }[]) =>
+  const overlay = (players: PlayerSlot[], real?: any[]) =>
     real && real.length
-      ? players.map((p, i) => ({ ...p, number: real[i]?.number ?? p.number, name: "", rating: 0, star: false }))
+      ? players.map((p, i) => {
+          const r = real[i];
+          return r ? { ...p, number: r.number, name: r.name ?? p.name, photo: r.photo, gridX: r.gridX, gridY: r.gridY } : p;
+        })
       : players;
   const homePlayers = overlay(home.players, realLU?.home);
   const awayPlayers = overlay(away.players, realLU?.away);
@@ -86,7 +100,8 @@ export function LineupPitch({ fixture }: { fixture: Fixture }) {
           {predicted ? "Predicted lineups" : "Lineups"}
           {realLU && (
             <span className="flex items-center gap-1 rounded-full border border-pitch/30 bg-pitch/5 px-2 py-0.5 text-[10px] normal-case tracking-normal text-pitch">
-              <span className="live-dot h-1 w-1 rounded-full bg-pitch" /> real · TxLINE
+              <span className="live-dot h-1 w-1 rounded-full bg-pitch" /> 
+              {fixture.live?.source === "api-football" ? "real · API-Football" : fixture.live?.source === "synth" ? "estimated" : "real · TxLINE"}
             </span>
           )}
         </h2>
@@ -146,11 +161,11 @@ export function LineupPitch({ fixture }: { fixture: Fixture }) {
 
             {/* players */}
             {dots.map((d) => {
-              const isHover = hover?.p === d.p && hover.side === d.side;
+              const isHover = hover?.p === d.p && hover?.side === d.side;
               const fill = d.side === "home" ? "var(--pitch)" : "var(--sol-purple)";
               return (
                 <g
-                  key={`${d.side}${d.p.number}`}
+                  key={`${d.side}-${d.p.name}`}
                   onMouseEnter={() => setHover(d)}
                   onMouseLeave={() => setHover(null)}
                   className="cursor-pointer"
@@ -166,7 +181,10 @@ export function LineupPitch({ fixture }: { fixture: Fixture }) {
                   <text x={d.x} y={d.y + 36} textAnchor="middle" fontSize="12" fill="#fff" opacity={0.9}>
                     {d.p.name}
                   </text>
-                  {d.p.rating > 0 && (
+                  {isHover && d.p.photo && (
+                    <image href={d.p.photo} x={d.x - 20} y={d.y - 70} width="40" height="40" className="drop-shadow-lg" />
+                  )}
+                  {d.p.rating > 0 && !isHover && (
                     <g>
                       <rect x={d.x + 12} y={d.y - 30} width={34} height={17} rx={5} fill={ratingTone(d.p.rating)} />
                       <text x={d.x + 29} y={d.y - 17.5} textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--background)">

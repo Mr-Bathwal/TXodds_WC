@@ -12,7 +12,7 @@ export interface FixturesResponse {
 }
 
 /** Live fixtures list. Auto-refreshes so scores/odds tick during a match. */
-export function useFixtures(refreshMs = 12_000) {
+export function useFixtures(refreshMs = 5_000) {
   const { data, error, isLoading } = useSWR<FixturesResponse>("/api/fixtures", fetcher, {
     refreshInterval: refreshMs,
     revalidateOnFocus: true,
@@ -26,7 +26,7 @@ export interface FixtureResponse {
   source: "mock" | "live";
 }
 
-export function useFixture(id: string, refreshMs = 8_000) {
+export function useFixture(id: string, refreshMs = 4_000) {
   const { data, error, isLoading } = useSWR<FixtureResponse>(
     id ? `/api/fixtures/${id}` : null,
     fetcher,

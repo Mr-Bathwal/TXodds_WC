@@ -32,9 +32,9 @@ const BAL_KEY = "matchpulse.bankroll.v1";
 /** Free-to-play economy knobs. */
 export const START_BALANCE = 10_000;
 export const MIN_STAKE = 10;
-export const TOPUP_AMOUNT = 5_000;
-const TOPUP_COOLDOWN = 24 * 60 * 60_000; // once per day
-const BUST_THRESHOLD = 100; // below this you can always top up
+export const TOPUP_AMOUNT = 100_000; // Increased for demo
+const TOPUP_COOLDOWN = 0; // Removed cooldown for demo
+const BUST_THRESHOLD = Infinity; // Always allow top up
 
 interface Bankroll {
   balance: number;
@@ -67,7 +67,7 @@ export function getBalance(): number {
   return Math.max(0, Math.round(loadBankroll().balance));
 }
 
-function adjustBalance(delta: number): void {
+export function adjustBalance(delta: number): void {
   const b = loadBankroll();
   b.balance = Math.max(0, b.balance + delta);
   saveBankroll(b);

@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import { SmoothScroll } from "@/components/providers/SmoothScroll";
 import { CustomCursor } from "@/components/providers/CustomCursor";
 import { ThemeProvider } from "@/lib/theme";
+import { WalletProvider } from "@/components/providers/WalletProvider";
 
 const GlobalBackground = dynamic(() => import("@/components/three/GlobalBackground"));
 
@@ -44,15 +45,17 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <ThemeProvider>
-          <CustomCursor />
-          <GlobalBackground />
-          <SmoothScroll>
-            <Header />
-            <main className="flex-1 w-full">{children}</main>
-            <Footer />
-          </SmoothScroll>
-        </ThemeProvider>
+        <WalletProvider>
+          <ThemeProvider>
+            <CustomCursor />
+            <GlobalBackground />
+            <SmoothScroll>
+              <Header />
+              <main className="flex-1 w-full">{children}</main>
+              <Footer />
+            </SmoothScroll>
+          </ThemeProvider>
+        </WalletProvider>
       </body>
     </html>
   );

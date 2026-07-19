@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import type { Fixture } from "@/lib/txline";
 import { type Pick, pickLabel } from "@/lib/solana/commitment";
 import { commitPrediction } from "@/lib/commitPrediction";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import {
   canTopUp,
   getBalance,
@@ -28,6 +30,7 @@ function oddsForPick(fixture: Fixture, pick: Pick): number {
 }
 
 export function PredictPanel({ fixture }: { fixture: Fixture }) {
+  const { publicKey, signMessage } = useWallet();
   const [market, setMarket] = useState<Market>("1x2");
   const [pick, setPick] = useState<Pick | null>(null);
   const [stake, setStake] = useState(250);
@@ -36,6 +39,7 @@ export function PredictPanel({ fixture }: { fixture: Fixture }) {
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState(START_BALANCE);
   const [bets, setBets] = useState<Prediction[]>([]);
+  const [showAllBets, setShowAllBets] = useState(false);
 
   useEffect(() => {
     const refresh = () => {
@@ -60,7 +64,8 @@ export function PredictPanel({ fixture }: { fixture: Fixture }) {
     setStatus("signing");
     setError(null);
     try {
-      const result = await commitPrediction(fixture, pick, stake);
+      const wallet = publicKey && signMessage ? { publicKey: publicKey.toBase58(), signMessage } : undefined;
+      const result = await commitPrediction(fixture, pick, stake, wallet);
       setCommitted(result);
       setStatus("done");
     } catch (e) {
@@ -71,8 +76,8 @@ export function PredictPanel({ fixture }: { fixture: Fixture }) {
 
   if (closed && bets.length === 0) {
     return (
-      <section className="py-2 text-center text-sm text-muted">
-        Predictions are closed — this match has finished.
+      <section className="flex h-full min-h-[200px] flex-col items-center justify-center py-2 text-center text-sm text-muted">
+        Match completed, no prediction market opened.
       </section>
     );
   }
@@ -203,24 +208,30 @@ export function PredictPanel({ fixture }: { fixture: Fixture }) {
                 </div>
               </div>
 
-              <button
-                disabled={!pick || status === "signing" || insufficient || stake < MIN_STAKE}
-                onClick={handleCommit}
-                className={cn(
-                  "mt-4 w-full rounded-xl py-2.5 text-sm font-semibold transition-all",
-                  !pick || insufficient
-                    ? "cursor-not-allowed bg-surface-2 text-muted"
-                    : "bg-gradient-to-r from-sol-purple to-sol-teal text-background hover:opacity-90",
-                )}
-              >
-                {status === "signing"
-                  ? "Anchoring on Solana…"
-                  : insufficient
-                    ? "Insufficient balance"
-                    : pick
-                      ? `Stake ${stake.toLocaleString()} → win ${potential.toLocaleString()}`
-                      : "Choose your call"}
-              </button>
+              {!publicKey ? (
+                <div className="mt-4 w-full [&_.wallet-adapter-button]:w-full [&_.wallet-adapter-button]:justify-center [&_.wallet-adapter-button]:rounded-xl [&_.wallet-adapter-button]:py-2.5 [&_.wallet-adapter-button]:text-sm [&_.wallet-adapter-button]:font-semibold [&_.wallet-adapter-button]:bg-surface-2 [&_.wallet-adapter-button]:text-foreground hover:[&_.wallet-adapter-button]:bg-surface-3">
+                  <WalletMultiButton>Connect Wallet to Predict</WalletMultiButton>
+                </div>
+              ) : (
+                <button
+                  disabled={!pick || status === "signing" || insufficient || stake < MIN_STAKE}
+                  onClick={handleCommit}
+                  className={cn(
+                    "mt-4 w-full rounded-xl py-2.5 text-sm font-semibold transition-all",
+                    !pick || insufficient
+                      ? "cursor-not-allowed bg-surface-2 text-muted"
+                      : "bg-gradient-to-r from-sol-purple to-sol-teal text-background hover:opacity-90",
+                  )}
+                >
+                  {status === "signing"
+                    ? "Anchoring on Solana…"
+                    : insufficient
+                      ? "Insufficient balance"
+                      : pick
+                        ? `Stake ${stake.toLocaleString()} → win ${potential.toLocaleString()}`
+                        : "Choose your call"}
+                </button>
+              )}
               <p className="mt-2 text-center text-xs text-muted">
                 {isLive
                   ? "Live odds locked at this instant & anchored on-chain. Bet as many times as you like."
@@ -235,11 +246,19 @@ export function PredictPanel({ fixture }: { fixture: Fixture }) {
       {/* your bets on this match */}
       {bets.length > 0 && (
         <div className="mt-6">
-          <div className="mb-2 text-[11px] uppercase tracking-wider text-muted">
-            Your bets on this match ({bets.length})
+          <div className="mb-2 text-[11px] uppercase tracking-wider text-muted flex justify-between items-center">
+            <span>Your bets on this match ({bets.length})</span>
+            {bets.length > 3 && (
+              <button 
+                onClick={() => setShowAllBets(!showAllBets)}
+                className="text-pitch hover:underline focus:outline-none"
+              >
+                {showAllBets ? "Show less" : "Show more"}
+              </button>
+            )}
           </div>
           <div className="divide-y divide-border/40">
-            {bets.map((b) => (
+            {(showAllBets ? bets : bets.slice(0, 3)).map((b) => (
               <BetRow key={b.id} bet={b} fixture={fixture} />
             ))}
           </div>

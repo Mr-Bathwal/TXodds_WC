@@ -51,3 +51,7 @@ scripts/txline-discover*.mjs
 scripts/txline-explore.mjs
 scripts/txline-goals.mjs
 scripts/txline-scores.mjs
+
+# local AI-session files
+.claude/
+handoff_to_claude.md

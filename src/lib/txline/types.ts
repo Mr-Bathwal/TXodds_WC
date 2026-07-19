@@ -68,6 +68,11 @@ export interface LineupPlayer {
   number: number; // shirt number
   positionId: number;
   starter: boolean;
+  name?: string;
+  photo?: string;
+  pos?: string; // e.g. "G", "D", "M", "F"
+  gridX?: number; // X coordinate on the pitch (derived from API-Football grid)
+  gridY?: number; // Y coordinate on the pitch (derived from API-Football grid)
 }
 
 /** Everything decoded from the TxLINE live event stream + validation. */
@@ -83,6 +88,13 @@ export interface LiveDetail {
   meta: { weather?: string; pitch?: string; venue?: string };
   /** Depth of the Merkle main-tree proof path (on-chain verifiability). */
   proofDepth?: number;
+  /**
+   * Where this detail came from, so the UI can label it honestly:
+   * `api-football` = real third-party match data; `txline` = decoded from the
+   * TxLINE live stream; `synth` = deterministically estimated (out-of-window
+   * fallback only, never when real data is available).
+   */
+  source?: "api-football" | "txline" | "synth";
 }
 
 export interface Fixture {

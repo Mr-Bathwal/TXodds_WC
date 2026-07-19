@@ -6,6 +6,10 @@ import { buildLeaderboard, type LeaderRow } from "@/lib/leaderboard";
 import { getDisplayName, getIdentity } from "@/lib/solana/identity";
 import { Rule } from "@/components/ui/Rule";
 import { cn, fnv1a, seededRandom } from "@/lib/utils";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { adjustBalance, START_BALANCE } from "@/lib/predictions";
+import bs58 from "bs58";
 
 /* ---------------- Celebration confetti ---------------- */
 
@@ -176,6 +180,9 @@ export default function LeaderboardPage() {
               <div className="mt-1 text-[11px] uppercase tracking-[0.25em] text-muted">streak</div>
             </div>
           </section>
+          
+          <ClaimRewards points={you.points} />
+
           <Rule className="my-10" />
         </>
       )}
@@ -249,6 +256,98 @@ function Row({ row }: { row: LeaderRow }) {
       <span className="text-right font-mono text-base font-semibold tabular-nums transition-colors group-hover:text-pitch">
         {row.points}
       </span>
+    </div>
+  );
+}
+
+function ClaimRewards({ points }: { points: number }) {
+  const { publicKey, signMessage } = useWallet();
+  const [status, setStatus] = useState<"idle" | "claiming" | "success" | "error" | "no_offers">("idle");
+  const [tx, setTx] = useState("");
+
+  const surplus = points - START_BALANCE;
+  const claimAmount = Math.max(0, surplus) * 0.00001; // 1000 surplus = 0.01 SOL
+
+  async function handleClaim() {
+    if (!publicKey || !signMessage) return;
+    
+    if (surplus <= 0) {
+      setStatus("no_offers");
+      return;
+    }
+
+    setStatus("claiming");
+    try {
+      const message = `Claim MatchPulse rewards for ${surplus} points`;
+      const sigBytes = await signMessage(new TextEncoder().encode(message));
+      const signature = bs58.encode(sigBytes);
+
+      const res = await fetch("/api/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          publicKey: publicKey.toBase58(),
+          amountSOL: claimAmount,
+          signature,
+          message,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Claim failed");
+
+      adjustBalance(-surplus); // Deduct points locally
+      setTx(data.signature);
+      setStatus("success");
+    } catch (e) {
+      console.error(e);
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div className="my-8 rounded-2xl border border-pitch/30 bg-pitch/5 p-6 text-center">
+      <h3 className="mb-2 text-xl font-bold text-pitch">Claim Winnings</h3>
+      <p className="mb-4 text-sm text-muted">
+        {surplus > 0 ? (
+          <>
+            You have a surplus of <strong className="text-foreground">{surplus.toLocaleString()} Pulse Points</strong> above the starting balance.
+            <br />
+            Claim them to your connected wallet as <strong className="text-sol-teal">{claimAmount.toFixed(4)} Devnet SOL</strong>!
+          </>
+        ) : (
+          <>
+            You need a balance greater than <strong className="text-foreground">{START_BALANCE.toLocaleString()}</strong> to claim.
+            <br />
+            Keep predicting matches to increase your stack!
+          </>
+        )}
+      </p>
+      
+      {!publicKey ? (
+        <div className="flex justify-center">
+          <WalletMultiButton style={{ background: "rgba(26,209,122,0.15)", color: "#1ad17a", border: "1px solid rgba(26,209,122,0.3)" }} />
+        </div>
+      ) : status === "success" ? (
+        <div className="text-sm">
+          <span className="text-pitch font-semibold">Claim Successful!</span>
+          <br />
+          <a href={`https://explorer.solana.com/tx/${tx}?cluster=devnet`} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sol-purple hover:underline">
+            View on Explorer ↗
+          </a>
+        </div>
+      ) : (
+        <div>
+          <button
+            onClick={handleClaim}
+            disabled={status === "claiming"}
+            className="rounded-full bg-pitch px-8 py-3 text-sm font-bold text-background transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+          >
+            {status === "claiming" ? "Claiming..." : "Sign & Claim"}
+          </button>
+          {status === "error" && <p className="mt-2 text-xs text-danger">Failed to claim. Please try again.</p>}
+          {status === "no_offers" && <p className="mt-2 text-xs text-muted">No offers claimable. Increase your balance first!</p>}
+        </div>
+      )}
     </div>
   );
 }
