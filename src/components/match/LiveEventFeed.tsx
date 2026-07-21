@@ -55,7 +55,7 @@ export function LiveEventFeed({ fixture }: { fixture: Fixture }) {
         <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Live Timeline</h2>
         <span className="flex items-center gap-1.5 text-[11px] text-muted">
           <span className="live-dot h-1.5 w-1.5 rounded-full bg-pitch" />
-          {events.length} events · {fixture.live?.source === "api-football" ? "API-Football" : fixture.live?.source === "synth" ? "estimated" : "TxLINE"}
+          {events.length} events · {fixture.live?.source === "espn" ? "ESPN" : fixture.live?.source === "api-football" ? "API-Football" : fixture.live?.source === "synth" ? "estimated" : "TxLINE"}
         </span>
       </div>
 

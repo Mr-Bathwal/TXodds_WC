@@ -2,6 +2,7 @@ import "server-only";
 import type { Fixture, FeedEvent, LineupPlayer, LiveDetail, MatchEvent, MatchResult, MatchStatus, Odds, TxLineClient } from "./types";
 import { resolveCountry } from "./countries";
 import { getApiFootballDetail, type ApiFootballDetail } from "../api-football";
+import { getEspnDetail } from "../espn";
 import { fnv1a, seededRandom } from "../utils";
 
 /**
@@ -629,9 +630,10 @@ function spreadMinutes(count: number, from: number, to: number, seed: number): n
 }
 
 /**
- * Rich, score-consistent match stats for a finished fixture. Mirrors the look
- * of the demo simulator (shots ≥ goals, possession tilts toward the chaser) so
- * the panel reads like a broadcast graphic while staying tied to the real score.
+ * Rich, score-consistent match stats for a finished fixture. Keeps the
+ * broadcast-graphic look (shots ≥ goals, possession tilts toward the chaser)
+ * while staying tied to the real score. Fallback only — used when neither ESPN
+ * nor API-Football can resolve the game (e.g. an out-of-window friendly).
  */
 function synthMatchStats(seed: number, homeGoals: number, awayGoals: number) {
   const clamp = (n: number, lo: number, hi: number) => Math.round(Math.max(lo, Math.min(hi, n)));
@@ -809,7 +811,6 @@ function shapeApiFootball(
     yellowCards: [yH, yA],
   };
 }
-
 async function buildFixture(raw: RawFixture): Promise<Fixture> {
   const nowIso = new Date().toISOString();
   // Scores carry the richest data — retry once on a transient failure.
@@ -869,33 +870,50 @@ async function buildFixture(raw: RawFixture): Promise<Fixture> {
           team: raw.Participant1IsHome ? e.team : (e.team === "home" ? "away" : "home"),
         }));
 
-  // ── Rich match detail from API-Football (the authoritative detail layer).
-  // Real goal minutes + scorers, shots, fouls, possession, cards, subs and full
-  // lineups with player photos — for any fixture we can match whose date is in
-  // the Free-plan window. TxLINE stays the source for the live score, odds and
-  // Solana verification. Budget-safe: every fetch is cached per-endpoint.
+  // ── Rich match detail: ESPN is the authoritative layer, API-Football a
+  // fallback. Real goal scorers + assists + minutes, full lineups with
+  // formations, and per-team stats — for any fixture we can resolve. TxLINE
+  // stays the source for the live score, odds and Solana verification. Both
+  // sources are cached per-endpoint so we stay polite / within budget.
   let enriched = false;
+  const applyDetail = (shaped: ShapedDetail) => {
+    if (shaped.events.length) events = shaped.events;
+    live = shaped.live;
+    // Prefer the detail source's corners/yellows; fall back to TxLINE's real
+    // cumulative totals if stats haven't been published yet (early live).
+    const cornersReal = shaped.corners[0] || shaped.corners[1];
+    const yellowReal = shaped.yellowCards[0] || shaped.yellowCards[1];
+    liveStats = {
+      corners: cornersReal ? shaped.corners : liveStats?.corners ?? [0, 0],
+      yellowCards: yellowReal ? shaped.yellowCards : liveStats?.yellowCards ?? [0, 0],
+    };
+    enriched = true;
+  };
+
   if (status !== "scheduled") {
+    const dateIso = new Date(raw.StartTime).toISOString().split("T")[0];
+    const isLive = status === "live" || status === "halftime";
+
+    // 1) ESPN — real detail for the (real) 2026 World Cup fixtures TxLINE mirrors.
     try {
-      const dateIso = new Date(raw.StartTime).toISOString().split("T")[0];
-      const isLive = status === "live" || status === "halftime";
-      const detail = await getApiFootballDetail(dateIso, home, away, { live: isLive });
-      if (detail && (detail.events.length || detail.statistics.length || detail.lineups.length)) {
-        const shaped = shapeApiFootball(detail, home, away, live, verif.depth, status);
-        if (shaped.events.length) events = shaped.events;
-        live = shaped.live;
-        // Prefer API-Football corners/yellows; fall back to TxLINE's real
-        // cumulative totals if stats haven't been published yet (early live).
-        const cornersReal = shaped.corners[0] || shaped.corners[1];
-        const yellowReal = shaped.yellowCards[0] || shaped.yellowCards[1];
-        liveStats = {
-          corners: cornersReal ? shaped.corners : liveStats?.corners ?? [0, 0],
-          yellowCards: yellowReal ? shaped.yellowCards : liveStats?.yellowCards ?? [0, 0],
-        };
-        enriched = true;
+      const espn = await getEspnDetail(dateIso, home, away, { live: isLive, status, proofDepth: verif.depth, baseLive: live });
+      if (espn && (espn.events.length || espn.live.lineup || espn.live.shots.home || espn.live.shots.away || espn.corners[0] || espn.corners[1])) {
+        applyDetail(espn);
       }
     } catch (e) {
-      console.error("API-Football enrichment failed:", e);
+      console.error("ESPN enrichment failed:", e);
+    }
+
+    // 2) API-Football — fallback only when ESPN couldn't resolve the game.
+    if (!enriched) {
+      try {
+        const detail = await getApiFootballDetail(dateIso, home, away, { live: isLive });
+        if (detail && (detail.events.length || detail.statistics.length || detail.lineups.length)) {
+          applyDetail(shapeApiFootball(detail, home, away, live, verif.depth, status));
+        }
+      } catch (e) {
+        console.error("API-Football enrichment failed:", e);
+      }
     }
   }
 
@@ -944,7 +962,7 @@ async function buildFixture(raw: RawFixture): Promise<Fixture> {
     };
   }
 
-  return {
+  const built: Fixture = {
     id: String(raw.FixtureId),
     stage: raw.Competition,
     venue: "",
@@ -962,6 +980,8 @@ async function buildFixture(raw: RawFixture): Promise<Fixture> {
     live,
     verification,
   };
+
+  return built;
 }
 
 function cacheTtlFor(fixtures: Fixture[]): number {

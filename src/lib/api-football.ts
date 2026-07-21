@@ -137,18 +137,10 @@ export async function getApiFootballDetail(
   });
 
   let apiId: number | null = null;
-  const isFraEng = homeName.includes("France") || homeName.includes("England");
-  const isEspArg = homeName.includes("Spain") || homeName.includes("Argentina");
-  
-  if (isFraEng) apiId = 1198544; // The exact match data the user wants
-  else if (isEspArg) apiId = 1538396;
-  else {
-    for (const date of candidates) {
-      apiId = await matchFixtureToApiFootball(date, homeName, awayName);
-      if (apiId) break;
-    }
+  for (const date of candidates) {
+    apiId = await matchFixtureToApiFootball(date, homeName, awayName);
+    if (apiId) break;
   }
-  
   if (!apiId) return null;
 
   const ttl = opts.live ? TTL_LIVE : TTL_FINISHED;

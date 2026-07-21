@@ -181,8 +181,8 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
   const [row, setRow] = useState<number>(-1);
   if (fixture.status === "scheduled") return null;
 
-  // Real per-side stats from TxLINE (live) take precedence; the demo feed shows
-  // the fuller simulated set.
+  // Full per-side detail (ESPN/API-Football/live) takes precedence; fall back to
+  // TxLINE's real cumulative totals (corners/cards) when that's all we have.
   const live = fixture.live;
   const real = fixture.liveStats;
   const rows: RowDef[] = live
@@ -195,7 +195,7 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
         ...(live.redCards.home + live.redCards.away > 0
           ? [{ icon: "card", label: "Red cards", home: live.redCards.home, away: live.redCards.away }]
           : []),
-        { icon: "shots", label: live.source === "api-football" ? "Fouls" : "Free kicks", home: live.freeKicks.home, away: live.freeKicks.away },
+        { icon: "shots", label: live.source === "api-football" || live.source === "espn" ? "Fouls" : "Free kicks", home: live.freeKicks.home, away: live.freeKicks.away },
       ]
     : real
     ? [
@@ -232,7 +232,7 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
         {(live || real) && (
           <span className="flex items-center gap-1 rounded-full border border-pitch/30 bg-pitch/5 px-2 py-0.5 text-[10px] normal-case tracking-normal text-pitch">
             <span className="live-dot h-1 w-1 rounded-full bg-pitch" />
-            {live?.source === "api-football" ? "real · API-Football" : live?.source === "synth" ? "estimated" : "live · TxLINE"}
+            {live?.source === "espn" ? "real · ESPN" : live?.source === "api-football" ? "real · API-Football" : live?.source === "synth" ? "estimated" : "live · TxLINE"}
           </span>
         )}
       </h2>

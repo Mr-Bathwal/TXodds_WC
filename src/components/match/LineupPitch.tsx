@@ -94,19 +94,19 @@ export function LineupPitch({ fixture }: { fixture: Fixture }) {
         <div className="flex items-center gap-3">
           <Flag iso={fixture.home.iso} code={fixture.home.code} className="h-6 w-9" />
           <span className="text-display text-lg font-bold">{fixture.home.name}</span>
-          <span className="font-mono text-sm text-pitch">{home.formation}</span>
+          <span className="font-mono text-sm text-pitch">{realLU?.formationHome ?? home.formation}</span>
         </div>
         <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-muted">
           {predicted ? "Predicted lineups" : "Lineups"}
           {realLU && (
             <span className="flex items-center gap-1 rounded-full border border-pitch/30 bg-pitch/5 px-2 py-0.5 text-[10px] normal-case tracking-normal text-pitch">
               <span className="live-dot h-1 w-1 rounded-full bg-pitch" /> 
-              {fixture.live?.source === "api-football" ? "real · API-Football" : fixture.live?.source === "synth" ? "estimated" : "real · TxLINE"}
+              {fixture.live?.source === "espn" ? "real · ESPN" : fixture.live?.source === "api-football" ? "real · API-Football" : fixture.live?.source === "synth" ? "estimated" : "real · TxLINE"}
             </span>
           )}
         </h2>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-sm text-sol-purple">{away.formation}</span>
+          <span className="font-mono text-sm text-sol-purple">{realLU?.formationAway ?? away.formation}</span>
           <span className="text-display text-lg font-bold">{fixture.away.name}</span>
           <Flag iso={fixture.away.iso} code={fixture.away.code} className="h-6 w-9" />
         </div>

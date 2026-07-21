@@ -84,17 +84,17 @@ export interface LiveDetail {
   freeKicks: { home: number; away: number };
   subs: { minute: number; team: "home" | "away"; inId: number; outId: number }[];
   redCards: { home: number; away: number };
-  lineup?: { home: LineupPlayer[]; away: LineupPlayer[] };
+  lineup?: { home: LineupPlayer[]; away: LineupPlayer[]; formationHome?: string; formationAway?: string };
   meta: { weather?: string; pitch?: string; venue?: string };
   /** Depth of the Merkle main-tree proof path (on-chain verifiability). */
   proofDepth?: number;
   /**
    * Where this detail came from, so the UI can label it honestly:
-   * `api-football` = real third-party match data; `txline` = decoded from the
-   * TxLINE live stream; `synth` = deterministically estimated (out-of-window
-   * fallback only, never when real data is available).
+   * `espn` / `api-football` = real third-party match data; `txline` = decoded
+   * from the TxLINE live stream; `synth` = deterministically estimated
+   * (out-of-window fallback only, never when real data is available).
    */
-  source?: "api-football" | "txline" | "synth";
+  source?: "espn" | "api-football" | "txline" | "synth";
 }
 
 export interface Fixture {
