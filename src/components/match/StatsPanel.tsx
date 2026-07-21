@@ -83,8 +83,9 @@ function StatRow({
   onEnter: () => void;
 }) {
   const fmt = def.format ?? ((n: number) => String(n));
-  const total = def.home + def.away || 1;
-  const homePct = (def.home / total) * 100;
+  const total = def.home + def.away;
+  // 0-0 rows split the bar evenly — `home/total` would paint away full-width.
+  const homePct = total === 0 ? 50 : (def.home / total) * 100;
   const homeLeads = def.home > def.away;
   const awayLeads = def.away > def.home;
 
@@ -179,13 +180,24 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
   const ref = useRef<HTMLDivElement>(null);
   const [side, setSide] = useState<Side>(null);
   const [row, setRow] = useState<number>(-1);
-  if (fixture.status === "scheduled") return null;
+  // Pre-match: show the full labelled board at zero rather than an empty box —
+  // the page reads as "ready to go" instead of broken.
+  const preMatch = fixture.status === "scheduled";
 
   // Full per-side detail (ESPN/API-Football/live) takes precedence; fall back to
   // TxLINE's real cumulative totals (corners/cards) when that's all we have.
-  const live = fixture.live;
-  const real = fixture.liveStats;
-  const rows: RowDef[] = live
+  const live = preMatch ? undefined : fixture.live;
+  const real = preMatch ? undefined : fixture.liveStats;
+  const rows: RowDef[] = preMatch
+    ? [
+        { icon: "possession", label: "Possession", home: 50, away: 50, format: () => "—" },
+        { icon: "shots", label: "Shots", home: 0, away: 0 },
+        { icon: "target", label: "On target", home: 0, away: 0 },
+        { icon: "corner", label: "Corners", home: 0, away: 0 },
+        { icon: "card", label: "Yellow cards", home: 0, away: 0 },
+        { icon: "shots", label: "Fouls", home: 0, away: 0 },
+      ]
+    : live
     ? [
         { icon: "possession", label: "Possession", home: live.possession.home, away: live.possession.away, format: (n) => `${n}%` },
         { icon: "shots", label: "Shots", home: live.shots.home, away: live.shots.away },
@@ -229,7 +241,11 @@ export function StatsPanel({ fixture }: { fixture: Fixture }) {
     >
       <h2 className="mb-8 flex items-center justify-center gap-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-muted">
         Match stats
-        {(live || real) && (
+        {preMatch ? (
+          <span className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] normal-case tracking-normal text-muted">
+            awaiting kick-off
+          </span>
+        ) : (live || real) && (
           <span className="flex items-center gap-1 rounded-full border border-pitch/30 bg-pitch/5 px-2 py-0.5 text-[10px] normal-case tracking-normal text-pitch">
             <span className="live-dot h-1 w-1 rounded-full bg-pitch" />
             {live?.source === "espn" ? "real · ESPN" : live?.source === "api-football" ? "real · API-Football" : live?.source === "synth" ? "estimated" : "live · TxLINE"}

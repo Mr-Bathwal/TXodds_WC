@@ -78,7 +78,7 @@ function Lane({
       {fixtures.length === 0 ? (
         <p className="px-1 py-10 text-center text-xs text-muted">{meta.empty}</p>
       ) : (
-        <div className="max-h-[600px] divide-y divide-border/40 overflow-y-auto">
+        <div className="max-h-[600px] divide-y divide-border overflow-y-auto">
           {fixtures.map((f) => (
             <FixtureRow key={f.id} fixture={f} compact />
           ))}
@@ -125,7 +125,7 @@ function MatchesContent() {
         {list.length === 0 && !isLoading ? (
           <p className="py-16 text-center text-sm text-muted">{VIEW_META[view].empty}</p>
         ) : (
-          <div className="divide-y divide-border/40">
+          <div className="divide-y divide-border">
             {list.map((f) => (
               <FixtureRow key={f.id} fixture={f} />
             ))}

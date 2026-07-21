@@ -12,10 +12,61 @@ import { cn } from "@/lib/utils";
  * simulated per-minute pressure view (demo feed).
  */
 export function MomentumChart({ fixture }: { fixture: Fixture }) {
+  if (fixture.status === "scheduled") {
+    return <PreMatchMomentum fixture={fixture} />;
+  }
   if (fixture.oddsHistory && fixture.oddsHistory.length >= 3) {
     return <MarketMomentum fixture={fixture} />;
   }
   return <SimulatedMomentum fixture={fixture} />;
+}
+
+/**
+ * Pre-match: the fully-labelled chart frame with a flat 50% line — the market
+ * hasn't moved because the match hasn't started. Keeps the page dressed
+ * instead of showing an empty box.
+ */
+function PreMatchMomentum({ fixture }: { fixture: Fixture }) {
+  const W = 900;
+  const H = 230;
+  const pad = 8;
+  const y50 = pad + 0.5 * (H - 2 * pad);
+
+  return (
+    <section className="relative">
+      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">
+          Market momentum
+          <span className="ml-2 normal-case tracking-normal text-muted">· win probability · from TxLINE odds</span>
+        </h2>
+      </div>
+
+      <div className="pointer-events-none absolute right-0 top-0 font-mono text-sm">
+        <span className="text-pitch">{fixture.home.code} 50%</span>
+        <span className="px-2 text-muted">·</span>
+        <span className="text-sol-purple">{fixture.away.code} 50%</span>
+      </div>
+
+      <div className="relative">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Win probability (match not started)">
+          <line x1={pad} y1={y50} x2={W - pad} y2={y50} stroke="var(--border)" strokeWidth="1" strokeDasharray="3 5" />
+          <text x={pad + 2} y={y50 - 4} fontSize="9" fill="var(--muted)">50%</text>
+          <path d={`M${pad} ${y50} L${W - pad} ${y50}`} fill="none" stroke="var(--pitch)" strokeWidth="2.5" opacity="0.5" />
+        </svg>
+
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="rounded-full border border-border/60 bg-surface/85 px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-muted backdrop-blur-sm">
+            Match not started
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-2 flex justify-between font-mono text-[10px] text-muted">
+        <span>kickoff</span>
+        <span>full time</span>
+      </div>
+    </section>
+  );
 }
 
 /** Real market momentum: home win probability over time, from TxLINE odds. */

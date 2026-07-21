@@ -14,7 +14,7 @@ import type { Fixture } from "@/lib/txline";
 function OpenLane({ fixtures }: { fixtures: Fixture[] }) {
   if (fixtures.length === 0) return null;
   return (
-    <div className="min-w-0 divide-y divide-border/40 rounded-2xl border border-border/40 p-3 sm:p-4">
+    <div className="min-w-0 divide-y divide-border rounded-2xl border border-border/40 p-3 sm:p-4">
       {fixtures.map((f) => (
         <FixtureRow key={f.id} fixture={f} compact />
       ))}
@@ -27,7 +27,10 @@ export default function PredictPage() {
   const { data } = useFixtures();
   const [histOpen, setHistOpen] = useState(false);
 
-  const open = (data?.fixtures ?? []).filter((f) => f.status !== "finished");
+  // Open = playable markets only (postponed no-shows would render a dead card).
+  const open = (data?.fixtures ?? []).filter(
+    (f) => f.status === "scheduled" || f.status === "live" || f.status === "halftime",
+  );
   const half = Math.ceil(open.length / 2);
   const colA = open.slice(0, half);
   const colB = open.slice(half);

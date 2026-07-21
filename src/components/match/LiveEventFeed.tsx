@@ -20,6 +20,31 @@ const META: Record<FeedKind, { icon: string; label: string; accent?: boolean }> 
 };
 
 export function LiveEventFeed({ fixture }: { fixture: Fixture }) {
+  // Pre-match: render the fully-labelled timeline frame (axis + 0'/45'/90'
+  // markers) with no event chips yet, so the box isn't blank before kick-off.
+  if (fixture.status === "scheduled") {
+    return (
+      <section className="flex flex-col h-full justify-center min-h-[180px]">
+        <div className="mb-8 flex items-baseline justify-between">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Live Timeline</h2>
+          <span className="flex items-center gap-1.5 text-[11px] text-muted">
+            <span className="h-1.5 w-1.5 rounded-full bg-border" />
+            0 events · awaiting kick-off
+          </span>
+        </div>
+        <div className="relative w-full px-6" style={{ height: 120 }}>
+          <div className="absolute inset-x-6 top-1/2 h-1 -translate-y-1/2 rounded-full bg-surface-2" />
+          {[0, 45, 90].map((m) => (
+            <div key={m} className="absolute top-1/2 flex -translate-y-1/2 flex-col items-center" style={{ left: `${(m / 90) * 100}%` }}>
+              <span className="h-2.5 w-px -translate-x-1/2 bg-muted/40" />
+              <span className="absolute top-3 -translate-x-1/2 font-mono text-[10px] text-muted">{m}&#39;</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   const events = fixture.live?.events;
   if (!events || events.length === 0) return null;
 
