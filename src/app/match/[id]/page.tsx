@@ -114,9 +114,7 @@ export default function MatchDetail() {
 
         {/* ================= ROW 2: TIMELINE ================= */}
         <Box>
-          <div className="mb-4 text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-            Live Timeline
-          </div>
+          {/* LiveEventFeed brings its own header row */}
           <LiveEventFeed fixture={fixture} />
         </Box>
 
@@ -125,19 +123,7 @@ export default function MatchDetail() {
           {/* Left Column: Momentum & H2H */}
           <div className="flex flex-col gap-6">
             <Box>
-              <div className="mb-4 flex items-center justify-between">
-                <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-                  Momentum
-                </div>
-                <div className="flex items-center gap-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-pitch" /> {fixture.home.name}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-sol-purple" /> {fixture.away.name}
-                  </span>
-                </div>
-              </div>
+              {/* MomentumChart brings its own header + legend/readout row */}
               <MomentumChart fixture={fixture} />
             </Box>
             

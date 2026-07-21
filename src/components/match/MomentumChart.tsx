@@ -93,13 +93,11 @@ function MarketMomentum({ fixture }: { fixture: Fixture }) {
   return (
     <section className="relative">
       <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2">
+        {/* right side of this row belongs to the absolute probability readout */}
         <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">
           Market momentum
-          <span className="ml-2 normal-case tracking-normal text-pitch">· live win probability</span>
+          <span className="ml-2 normal-case tracking-normal text-pitch">· live win probability · from TxLINE odds</span>
         </h2>
-        <span className="flex items-center gap-1.5 text-xs text-muted">
-          <span className="live-dot h-1.5 w-1.5 rounded-full bg-pitch" /> from TxLINE odds
-        </span>
       </div>
 
       <div className="pointer-events-none absolute right-0 top-0 font-mono text-sm">
@@ -187,7 +185,13 @@ function SimulatedMomentum({ fixture }: { fixture: Fixture }) {
     <section className="relative">
       <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Momentum</h2>
-        <div className="flex items-center gap-5 text-xs text-muted">
+        {/* legend yields its spot to the hover readout — both live top-right */}
+        <div
+          className={cn(
+            "flex items-center gap-5 text-xs text-muted transition-opacity duration-200",
+            hovered && "opacity-0",
+          )}
+        >
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-sm bg-pitch" /> {fixture.home.name}
           </span>

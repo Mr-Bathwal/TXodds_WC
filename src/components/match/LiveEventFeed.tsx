@@ -20,16 +20,16 @@ const META: Record<FeedKind, { icon: string; label: string; accent?: boolean }> 
 };
 
 export function LiveEventFeed({ fixture }: { fixture: Fixture }) {
-  // Pre-match: render the fully-labelled timeline frame (axis + 0'/45'/90'
-  // markers) with no event chips yet, so the box isn't blank before kick-off.
-  if (fixture.status === "scheduled") {
+  // No chips to place (pre-match, or a feed gap mid-match): render the fully-
+  // labelled timeline frame (axis + 0'/45'/90' markers) so the box isn't blank.
+  if (fixture.status === "scheduled" || !fixture.live?.events?.length) {
     return (
       <section className="flex flex-col h-full justify-center min-h-[180px]">
         <div className="mb-8 flex items-baseline justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Live Timeline</h2>
           <span className="flex items-center gap-1.5 text-[11px] text-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-border" />
-            0 events · awaiting kick-off
+            0 events · {fixture.status === "scheduled" ? "awaiting kick-off" : "no events yet"}
           </span>
         </div>
         <div className="relative w-full px-6" style={{ height: 120 }}>
