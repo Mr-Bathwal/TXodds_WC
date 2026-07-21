@@ -24,7 +24,10 @@ import { fnv1a, seededRandom } from "../utils";
 
 const HOST = process.env.TXLINE_HOST ?? "https://txline-dev.txodds.com";
 const API_TOKEN = process.env.TXLINE_API_TOKEN ?? "";
-const COMPETITIONS = (process.env.TXLINE_COMPETITIONS ?? "72").split(",").map((s) => s.trim());
+// 72 = World Cup, 430 = International Friendlies. Friendlies keep the Upcoming
+// (and, once they kick off, Live) lanes populated after the tournament ends —
+// they're real TxLINE fixtures with on-chain validation like any other.
+const COMPETITIONS = (process.env.TXLINE_COMPETITIONS ?? "72,430").split(",").map((s) => s.trim());
 const CLUSTER = (process.env.SOLANA_CLUSTER ?? "devnet") as "devnet" | "testnet" | "mainnet-beta";
 // Devnet TxLINE program id — where the data Merkle roots are published on-chain.
 const PROGRAM_ID = "6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J";
@@ -196,10 +199,15 @@ function mapLiveStats(scores: RawScore[] | null): { p1: PartTotals; p2: PartTota
   return { p1: totals(1), p2: totals(2) };
 }
 
+// A fixture with no kickoff this long after its scheduled start never happened
+// in the feed — call it postponed so it doesn't linger in the Upcoming lane.
+const NO_SHOW_GRACE_MS = 3 * 3600_000;
+
 /** Derive status + minute from the score event stream. */
 function mapStatus(scores: RawScore[] | null, startTime: number): { status: MatchStatus; minute: number | null } {
+  const noShow = startTime < Date.now() - NO_SHOW_GRACE_MS;
   if (!scores || scores.length === 0) {
-    return { status: startTime > Date.now() ? "scheduled" : "scheduled", minute: null };
+    return { status: noShow ? "postponed" : "scheduled", minute: null };
   }
   const actions = new Set(scores.map((s) => s.Action));
   const clock = [...scores].reverse().find((s) => s.Clock)?.Clock;
@@ -214,7 +222,7 @@ function mapStatus(scores: RawScore[] | null, startTime: number): { status: Matc
     }
     return { status: "live", minute: Math.max(1, Math.min(90, Math.floor(secs / 60) + 1)) };
   }
-  return { status: "scheduled", minute: null };
+  return { status: noShow ? "postponed" : "scheduled", minute: null };
 }
 
 /**

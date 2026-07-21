@@ -8,11 +8,12 @@ export function formatKickoff(iso: string): string {
   if (diffMin >= 60 && diffMin < 1440) {
     return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   }
-  return d.toLocaleString(undefined, {
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  // Within the week a weekday is unambiguous; beyond that show the date —
+  // "Wed 8:30 PM" for a match two months out reads as *this* Wednesday.
+  if (Math.abs(diffMin) < 6 * 1440) {
+    return d.toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
+  }
+  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 /** Decimal odds -> implied probability %. */
