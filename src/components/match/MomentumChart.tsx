@@ -172,7 +172,8 @@ function SimulatedMomentum({ fixture }: { fixture: Fixture }) {
   const barW = W / 90;
 
   const hovered = hoverMin ? points.find((p) => p.minute === hoverMin) : undefined;
-  const dominance = hovered ? Math.round(Math.abs(hovered.value) * 100) : 0;
+  // Signed dominance (-1..1, + = home) shown as a two-sided share of the minute.
+  const homeShare = hovered ? Math.round(50 * (1 + hovered.value)) : 50;
 
   function onMove(e: React.MouseEvent<SVGSVGElement>) {
     const rect = svgRef.current?.getBoundingClientRect();
@@ -210,10 +211,11 @@ function SimulatedMomentum({ fixture }: { fixture: Fixture }) {
       >
         {hovered && (
           <span>
-            <span className="text-muted">{hovered.minute}&rsquo; · </span>
-            <span className={hovered.value >= 0 ? "text-pitch" : "text-sol-purple"}>
-              {hovered.value >= 0 ? fixture.home.code : fixture.away.code} {dominance}%
-            </span>
+            <span className="text-muted">{hovered.minute}&rsquo;</span>
+            <span className="px-2 text-muted">·</span>
+            <span className="text-pitch">{fixture.home.code} {homeShare}%</span>
+            <span className="px-2 text-muted">·</span>
+            <span className="text-sol-purple">{fixture.away.code} {100 - homeShare}%</span>
           </span>
         )}
       </div>
