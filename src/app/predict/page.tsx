@@ -32,6 +32,14 @@ export default function PredictPage() {
   const colA = open.slice(0, half);
   const colB = open.slice(half);
 
+  // Settled markets: finished matches keep a read-only, on-chain-settled market
+  // so the surface stays populated between live fixtures — tap through to review
+  // the final odds, the winning side, and the verification proof.
+  const finished = (data?.fixtures ?? []).filter((f) => f.status === "finished");
+  const fHalf = Math.ceil(finished.length / 2);
+  const finA = finished.slice(0, fHalf);
+  const finB = finished.slice(fHalf);
+
   return (
     <div className="pb-28">
       {/* ================= FULL-BLEED VIDEO DASHBOARD HERO ================= */}
@@ -122,10 +130,27 @@ export default function PredictPage() {
             </div>
           ) : (
             <p className="py-10 text-center text-sm text-muted">
-              No open matches right now — check back soon.
+              No live or upcoming markets right now — review settled results below.
             </p>
           )}
         </section>
+
+        {/* ================= RECENT RESULTS — settled markets ================= */}
+        {finished.length > 0 && (
+          <section className="mt-12">
+            <div className="mb-6 flex items-baseline justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">
+                Recent results
+                <span className="ml-3 normal-case tracking-normal text-pitch">· settled on-chain</span>
+              </h2>
+              <span className="font-mono text-xs text-muted">{finished.length} matches</span>
+            </div>
+            <div className="grid items-start gap-4 lg:grid-cols-2">
+              <OpenLane fixtures={finA} />
+              <OpenLane fixtures={finB} />
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

@@ -978,8 +978,15 @@ async function loadAll(): Promise<Fixture[]> {
     /* apiGet retries auth per-call; fall through */
   }
 
+  // Fixture window (in epoch-days). We look back far enough to keep the board
+  // populated once a tournament's live window closes: TxLINE retains finished
+  // matches' full score/event history, so rather than showing an empty "today"
+  // we surface the most recent completed fixtures (e.g. the knockout stage) plus
+  // anything live or upcoming. Tunable via TXLINE_LOOKBACK_DAYS (default 16).
   const today = Math.floor(Date.now() / 86_400_000);
-  const days = [today - 1, today, today + 1];
+  const lookback = Math.max(1, Number(process.env.TXLINE_LOOKBACK_DAYS) || 16);
+  const days: number[] = [];
+  for (let d = today - lookback; d <= today + 1; d++) days.push(d);
 
   const rawMap = new Map<number, RawFixture>();
   await Promise.all(

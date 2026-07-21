@@ -30,8 +30,25 @@ export function GoalThread({ fixture }: { fixture: Fixture }) {
       }, {}),
   ).sort((a, b) => a.minute - b.minute);
 
+  // A chip occupies ~16 minutes of horizontal space. Stack same-side goals that
+  // fall closer than that into separate vertical lanes so they never collide.
+  const CHIP_MIN = 16;
+  const assignLanes = <T extends { minute: number }>(items: T[]) => {
+    const laneEnds: number[] = [];
+    return items.map((g) => {
+      let lane = laneEnds.findIndex((end) => g.minute - end >= CHIP_MIN);
+      if (lane === -1) lane = laneEnds.length;
+      laneEnds[lane] = g.minute;
+      return { ...g, lane };
+    });
+  };
+  const laid = [
+    ...assignLanes(grouped.filter((g) => g.team === "home")),
+    ...assignLanes(grouped.filter((g) => g.team !== "home")),
+  ];
+
   return (
-    <div className="relative mx-auto mt-4 h-32 w-full max-w-3xl px-2">
+    <div className="relative mx-auto mt-4 h-44 w-full max-w-3xl px-2">
       {/* base thread */}
       <div className="absolute inset-x-2 top-1/2 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       {/* played progress */}
@@ -53,26 +70,33 @@ export function GoalThread({ fixture }: { fixture: Fixture }) {
       )}
 
       {/* goal clouds */}
-      {grouped.map((g, i) => {
+      {laid.map((g, i) => {
         const home = g.team === "home";
+        // Edge-aware anchoring so chips near 0'/90' never spill out of the box:
+        // left-align the earliest, right-align the latest, centre the rest.
+        const p = (Math.min(g.minute, 90) / 90) * 100;
+        const edge = p <= 8 ? "left" : p >= 92 ? "right" : "center";
+        const drop = 6 + g.lane * 34; // connector length grows one lane at a time (clears chip height)
+        const connector = (
+          <div
+            className={cn(
+              "w-px",
+              home ? "bg-gradient-to-b from-pitch/70 to-transparent" : "bg-gradient-to-t from-sol-purple/70 to-transparent",
+            )}
+            style={{ height: drop }}
+          />
+        );
         return (
           <div
             key={i}
             className={cn(
-              "absolute flex w-max -translate-x-1/2 flex-col items-center",
-              home ? "top-1 bottom-1/2" : "top-1/2 bottom-1",
+              "absolute flex w-max flex-col",
+              edge === "left" ? "items-start translate-x-0" : edge === "right" ? "items-end -translate-x-full" : "items-center -translate-x-1/2",
             )}
-            style={{ left: pct(g.minute) }}
+            style={{ left: pct(g.minute), ...(home ? { bottom: "50%" } : { top: "50%" }) }}
           >
             {home && <GoalCloud minute={g.minute} code={fixture.home.code} tone="pitch" count={g.count} />}
-            <div
-              className={cn(
-                "w-px flex-1",
-                home
-                  ? "bg-gradient-to-b from-pitch/70 to-transparent"
-                  : "bg-gradient-to-t from-sol-purple/70 to-transparent",
-              )}
-            />
+            {connector}
             {!home && <GoalCloud minute={g.minute} code={fixture.away.code} tone="purple" count={g.count} />}
           </div>
         );
